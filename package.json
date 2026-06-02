@@ -1,0 +1,49 @@
+{
+  "name": "orbit",
+  "version": "1.0.0",
+  "description": "Orbit — desktop setup for Antigravity, OrbitPrompter, and mobile dev tooling",
+  "main": "electron/main.js",
+  "type": "module",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "simple-icons": "^11.15.0",
+    "zx": "^8.0.0"
+  },
+  "devDependencies": {
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "app.orbit.desktop",
+    "productName": "Orbit",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "lib/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development"
+    }
+  }
+}

@@ -1,0 +1,323 @@
+/* Orbit motion — view enters, staggered lists, install feedback */
+
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-fast: 0.18s;
+  --motion-medium: 0.38s;
+  --motion-slow: 0.55s;
+}
+
+@keyframes orbit-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orbit-fade-scale {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes orbit-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes orbit-success-pop {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.4;
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.55);
+    transform: scale(1.12);
+  }
+}
+
+@keyframes orbit-line-fill {
+  from {
+    transform: scaleX(0);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes orbit-progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes orbit-launch-glow {
+  0%,
+  100% {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(56, 189, 248, 0), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    box-shadow: 0 4px 28px rgba(0, 0, 0, 0.4), 0 0 24px rgba(56, 189, 248, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+@keyframes orbit-check-pop {
+  0% {
+    transform: scale(0.85);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ——— Wizard view enters ——— */
+.wiz-shell .view-section.active.wiz-view {
+  animation: orbit-fade-scale var(--motion-medium) var(--ease-out-expo) both;
+}
+
+.wiz-shell #view-choices.active .wiz-page-header {
+  animation: orbit-fade-up var(--motion-medium) var(--ease-out-expo) both;
+}
+
+.wiz-shell #view-choices.active .wiz-choice-card {
+  animation: orbit-stagger-in var(--motion-slow) var(--ease-spring) both;
+}
+
+.wiz-shell #view-choices.active .wiz-choice-card:nth-child(1) {
+  animation-delay: 0.06s;
+}
+
+.wiz-shell #view-choices.active .wiz-choice-card:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.wiz-shell #view-progress.active .wiz-page-header--compact {
+  animation: orbit-fade-up var(--motion-medium) var(--ease-out-expo) both;
+}
+
+.wiz-shell #view-progress.active .wiz-panel--progress {
+  animation: orbit-fade-up calc(var(--motion-medium) + 0.05s) var(--ease-out-expo) 0.05s both;
+}
+
+.wiz-shell .custom-step.active {
+  animation: orbit-fade-up var(--motion-medium) var(--ease-out-expo) both;
+}
+
+/* ——— Step indicator ——— */
+.wiz-shell .step-dot {
+  transition: transform var(--motion-fast) var(--ease-spring), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.wiz-shell .step-dot.is-current {
+  animation: orbit-dot-pulse 2s ease-in-out infinite;
+}
+
+.wiz-shell .step-line {
+  transform-origin: left center;
+  transition: background-color 0.3s ease;
+}
+
+.wiz-shell .step-line.is-filled {
+  background-color: rgba(56, 189, 248, 0.45);
+  animation: orbit-line-fill 0.45s var(--ease-out-expo) both;
+}
+
+/* ——— Install list ——— */
+.motion-stagger-item {
+  animation: orbit-stagger-in var(--motion-medium) var(--ease-spring) both;
+  animation-delay: calc(var(--stagger-i, 0) * 55ms);
+}
+
+.wiz-step-group.motion-stagger-item {
+  animation-delay: calc(var(--stagger-i, 0) * 55ms - 20ms);
+}
+
+.wiz-step-item.is-active {
+  animation: none;
+}
+
+.wiz-step-icon.success.motion-pop {
+  animation: orbit-success-pop 0.45s var(--ease-spring) both;
+}
+
+.wiz-step-icon.running {
+  animation: spin 0.85s linear infinite;
+}
+
+.wiz-progress-track {
+  position: relative;
+  overflow: hidden;
+}
+
+.wiz-progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.wiz-progress-track.is-active .wiz-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: orbit-progress-shimmer 1.4s ease-in-out infinite;
+}
+
+.wiz-progress-title {
+  transition: color 0.35s ease;
+}
+
+.wiz-progress-meta {
+  transition: opacity 0.25s ease;
+}
+
+/* ——— Cards & controls ——— */
+.wiz-choice-card {
+  will-change: transform;
+}
+
+.wiz-choice-card:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.wiz-choice-card .wiz-card-icon {
+  transition: transform var(--motion-medium) var(--ease-spring);
+}
+
+.wiz-choice-card:hover .wiz-card-icon,
+.wiz-choice-card.selected .wiz-card-icon {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.wiz-check-item {
+  transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease, transform var(--motion-fast) var(--ease-spring);
+}
+
+.wiz-check-item:has(input:checked) {
+  animation: orbit-check-pop 0.35s var(--ease-spring) both;
+}
+
+.dash-btn-save,
+.btn-primary,
+.btn-secondary,
+.wiz-btn-ghost,
+.lp-launch-btn {
+  transition: transform var(--motion-fast) var(--ease-spring), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-btn-save:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.lp-launch-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.dash-btn-save:active:not(:disabled),
+.lp-launch-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.lp-launch-btn.is-ready:not(:disabled):not(.is-running) {
+  animation: orbit-launch-glow 2.8s ease-in-out infinite;
+}
+
+/* ——— Dashboard ——— */
+.view-dashboard.active {
+  animation: orbit-fade-scale 0.45s var(--ease-out-expo) both;
+}
+
+.dash-stage-panel.active {
+  animation: orbit-fade-up 0.35s var(--ease-out-expo) both;
+}
+
+.dash-nav-tab {
+  transition: color 0.2s ease, background-color 0.2s ease, transform var(--motion-fast) var(--ease-spring);
+}
+
+.dash-nav-tab.active {
+  transform: translateY(-1px);
+}
+
+.diag-tc.motion-stagger-item {
+  animation: orbit-stagger-in 0.42s var(--ease-spring) both;
+  animation-delay: calc(var(--stagger-i, 0) * 40ms);
+}
+
+.diag-tc {
+  transition: border-color 0.2s ease, transform var(--motion-fast) var(--ease-spring);
+}
+
+.diag-tc:hover {
+  transform: translateY(-2px);
+}
+
+.lp-comp-row {
+  animation: orbit-fade-up 0.4s var(--ease-out-expo) both;
+  animation-delay: calc(var(--stagger-i, 0) * 60ms);
+}
+
+#overview-diag-fill {
+  transition: width 0.65s var(--ease-out-expo);
+}
+
+.dash-nav-logo-dot {
+  animation: orbit-dot-pulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .wiz-choice-card:hover,
+  .wiz-choice-card.selected,
+  .diag-tc:hover {
+    transform: none;
+  }
+
+  .lp-launch-btn.is-ready {
+    animation: none;
+  }
+}
