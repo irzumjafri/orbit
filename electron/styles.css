@@ -3127,6 +3127,7 @@ body:has(#wiz-shell) .titlebar__title {
   justify-content: center;
   width: min(280px, 42vw);
   height: 280px;
+  pointer-events: none;
 }
 
 .lp-mascot-glow {
@@ -3178,6 +3179,7 @@ body:has(#wiz-shell) .titlebar__title {
   filter: drop-shadow(0 16px 48px rgba(56, 189, 248, 0.28));
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
   transition: opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.6s ease;
 }
 
