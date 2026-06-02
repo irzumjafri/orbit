@@ -797,7 +797,15 @@ function syncRemoatUi(running, canLaunch) {
   const mascotWrap = document.querySelector('.lp-mascot-wrap');
   const controlCenter = document.querySelector('.control-center');
   
-  if (mascotWrap) mascotWrap.classList.toggle('is-ignited', !!running);
+  if (mascotWrap) {
+    const wasIgnited = mascotWrap.classList.contains('is-ignited');
+    mascotWrap.classList.toggle('is-ignited', !!running);
+    if (wasIgnited && !running) {
+      mascotWrap.classList.add('is-landing');
+    } else if (running) {
+      mascotWrap.classList.remove('is-landing');
+    }
+  }
   if (controlCenter) controlCenter.classList.toggle('is-ignited', !!running);
 
   if (!btn || !titleEl) return;

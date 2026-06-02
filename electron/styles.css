@@ -3186,12 +3186,18 @@ body:has(#wiz-shell) .titlebar__title {
 .lp-mascot-img--idle {
   opacity: 1;
   transform: scale(1) translateY(0);
-  animation: idle-entrance 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .lp-mascot-img--ignited {
   opacity: 0;
   transform: scale(0.7) translateY(40px) rotate(-10deg);
+}
+
+.lp-mascot-wrap.is-landing .lp-mascot-img--idle {
+  animation: idle-entrance 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.lp-mascot-wrap.is-landing .lp-mascot-img--ignited {
   animation: ignited-exit 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
