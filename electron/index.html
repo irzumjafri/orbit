@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" class="fluent-app">
+<head>
+  <meta charset="UTF-8">
+  <title>Orbit</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="motion.css">
+</head>
+<body>
+  <header class="titlebar" role="banner">
+    <span class="titlebar__title">Orbit</span>
+  </header>
+
+  <div class="wiz-shell dash-executive" id="wiz-shell">
+    <div class="dash-space-bg" aria-hidden="true">
+      <div class="dash-space-nebula"></div>
+      <div class="dash-space-stars dash-space-stars--layer1"></div>
+      <div class="dash-space-stars dash-space-stars--layer2"></div>
+      <div class="dash-space-stars dash-space-stars--layer3"></div>
+    </div>
+
+    <div class="step-indicator wiz-step-indicator" id="step-indicator">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot-3"></div>
+    </div>
+
+    <div class="view-section view-boot active" id="view-boot" aria-busy="true">
+      <div class="view-boot__inner">
+        <div class="view-boot__spinner" aria-hidden="true"></div>
+        <p class="view-boot__title" id="view-boot-title">Orbit</p>
+        <p class="view-boot__label" id="view-boot-label">Checking your environment…</p>
+      </div>
+    </div>
+
+    <div class="view-section wiz-view" id="view-choices">
+      <div class="wiz-page">
+        <header class="wiz-page-header">
+          <p class="dash-section-title">Setup</p>
+          <h1 class="wiz-page-title">Select launch sequence</h1>
+          <p class="wiz-page-lead">Express installs everything. Custom lets you pick tools, OrbitPrompter, and Autopilot workflows.</p>
+        </header>
+        <div class="wiz-cards wiz-cards--two">
+          <button type="button" class="wiz-choice-card dash-surface" id="card-express">
+            <span class="wiz-card-tag wiz-card-tag--accent">recommended</span>
+            <div class="wiz-card-icon" aria-hidden="true">🚀</div>
+            <h2 class="wiz-card-title">Express launch</h2>
+            <p class="wiz-card-desc">Install standard tools, Antigravity IDE, MCPs, OrbitPrompter defaults, and all Autopilot files.</p>
+            <span class="wiz-card-cta">Start express →</span>
+          </button>
+          <button type="button" class="wiz-choice-card dash-surface" id="card-custom">
+            <span class="wiz-card-tag">advanced</span>
+            <div class="wiz-card-icon wiz-card-icon--muted" aria-hidden="true">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.5.5 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.59.22L2.73 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.04.3-.06.61-.06.94s.02.64.06.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
+            </div>
+            <h2 class="wiz-card-title">Custom payload</h2>
+            <p class="wiz-card-desc">Pick tools, MCPs, Autopilot workflows, and GEMINI.md — or workflows only. Configure OrbitPrompter when needed.</p>
+            <span class="wiz-card-cta">Configure →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-section wiz-view" id="view-form">
+      <div class="wiz-page wiz-page--form">
+        <div class="wiz-panel dash-surface">
+          <header class="wiz-panel-header">
+            <p class="dash-section-title">Custom payload</p>
+            <h2 class="wiz-panel-title">Configure payload</h2>
+            <p class="wiz-panel-sub" id="custom-form-subtitle">Step 2 of 4 — Tools &amp; integrations</p>
+          </header>
+          <div class="wiz-panel-scroll custom-form-scroll">
+            <div class="custom-step active" id="custom-step-tools">
+              <p class="wiz-intro" id="custom-tools-intro">Choose what to install. If OrbitPrompter CLI is on, you will set the bot token (step 3) then access &amp; workspace (step 4).</p>
+              <p class="dash-section-title">Tools &amp; integrations</p>
+              <div class="wiz-check-grid">
+                <label class="wiz-check-item"><input type="checkbox" value="git" class="tool-checkbox" checked> Git</label>
+                <label class="wiz-check-item"><input type="checkbox" value="python" class="tool-checkbox" checked> Python 3</label>
+                <label class="wiz-check-item"><input type="checkbox" value="node" class="tool-checkbox" checked> Node.js</label>
+                <label class="wiz-check-item"><input type="checkbox" value="supabase" class="tool-checkbox" checked> Supabase CLI</label>
+                <label class="wiz-check-item"><input type="checkbox" value="eas-cli" class="tool-checkbox" checked> EAS CLI</label>
+                <label class="wiz-check-item"><input type="checkbox" value="tmole" class="tool-checkbox" checked> tmole (Tunnelmole)</label>
+                <label class="wiz-check-item"><input type="checkbox" value="orbitprompter" class="tool-checkbox" checked> OrbitPrompter CLI</label>
+                <label class="wiz-check-item"><input type="checkbox" id="install-ag" checked> Antigravity IDE</label>
+                <label class="wiz-check-item"><input type="checkbox" id="configure-mcps" checked> GitHub &amp; Supabase MCPs</label>
+              </div>
+              <p class="dash-section-title wiz-section-gap">Autopilot</p>
+              <div class="wiz-check-grid wiz-check-grid--autopilot">
+                <label class="wiz-check-item wiz-check-item--wide"><input type="checkbox" id="install-workflows" checked> Workflow files — <code>~/.agents/workflows/</code></label>
+                <label class="wiz-check-item wiz-check-item--wide"><input type="checkbox" id="install-gemini" checked> Global rules — <code>~/.gemini/GEMINI.md</code></label>
+              </div>
+              <p class="dash-field-hint wiz-autopilot-hint">Workflows: feature.md, submit.md, test.md, project-creator.md. Uncheck all tools above for a workflows-only install.</p>
+            </div>
+            <div class="custom-step" id="custom-step-remoat-token">
+              <p class="wiz-intro">From @BotFather: create a bot with <code>/newbot</code>, then paste the API token here.</p>
+              <div class="dash-field">
+                <label class="dash-field-label" for="remoat-bot-token">Bot token</label>
+                <input type="password" class="dash-field-input" id="remoat-bot-token" placeholder="123456789:AAH…" autocomplete="off">
+                <p class="dash-field-hint">Get from @BotFather</p>
+              </div>
+            </div>
+            <div class="custom-step" id="custom-step-remoat-access">
+              <p class="wiz-intro">Only these Telegram users may control the bot. Projects live under the workspace folder.</p>
+              <div class="dash-field">
+                <label class="dash-field-label" for="remoat-allowed-user-ids">Allowed user IDs</label>
+                <input type="text" class="dash-field-input" id="remoat-allowed-user-ids" placeholder="From @userinfobot — comma-separated">
+              </div>
+              <div class="dash-field">
+                <label class="dash-field-label" for="remoat-workspace-dir">Workspace folder</label>
+                <input type="text" class="dash-field-input" id="remoat-workspace-dir" placeholder="~/Development/personal">
+                <p class="dash-field-hint">Parent folder for OrbitPrompter /project</p>
+              </div>
+            </div>
+          </div>
+          <footer class="wiz-panel-footer">
+            <button type="button" class="wiz-btn-ghost" id="btn-back">← Back</button>
+            <div class="wiz-panel-footer-end">
+              <button type="button" class="dash-btn-save" id="btn-custom-continue">Continue</button>
+              <button type="button" class="dash-btn-save" id="btn-start-custom" style="display: none;">Launch</button>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-section wiz-view" id="view-progress">
+      <div class="wiz-page wiz-page--progress">
+        <header class="wiz-page-header wiz-page-header--compact">
+          <p class="dash-section-title">Install</p>
+          <h1 class="wiz-page-title" id="progress-title">Setting up your environment…</h1>
+          <p class="wiz-progress-meta" id="progress-meta" hidden></p>
+          <div class="wiz-progress-track" id="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="wiz-progress-fill" id="progress-fill"></div>
+          </div>
+        </header>
+        <div class="wiz-panel dash-surface wiz-panel--progress">
+          <div class="wiz-progress-list" id="steps-container"></div>
+          <footer class="wiz-panel-footer wiz-panel-footer--center">
+            <button type="button" class="dash-btn-save" id="btn-finish" style="display: none;">Open Orbit</button>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 4: Dashboard -->
+  <div class="view-section view-dashboard" id="view-dashboard" style="transform: none; display: none;">
+    <div class="control-center dash-executive">
+      <div class="dash-space-bg" aria-hidden="true">
+        <div class="dash-space-nebula"></div>
+        <div class="dash-space-stars dash-space-stars--layer1"></div>
+        <div class="dash-space-stars dash-space-stars--layer2"></div>
+        <div class="dash-space-stars dash-space-stars--layer3"></div>
+      </div>
+      <header class="dash-nav" role="banner">
+        <div class="dash-nav-brand">
+          <div class="dash-nav-logo" aria-hidden="true"><span class="dash-nav-logo-dot"></span></div>
+          <span class="dash-nav-title">Orbit</span>
+        </div>
+        <nav class="dash-nav-tabs" role="tablist">
+          <button type="button" class="dash-nav-tab active" id="btn-dock-mission" role="tab" aria-selected="true">Overview</button>
+          <button type="button" class="dash-nav-tab" id="btn-dock-diagnostics" role="tab" aria-selected="false">Diagnostics</button>
+          <button type="button" class="dash-nav-tab" id="btn-dock-remoat" role="tab" aria-selected="false">Configure</button>
+          <button type="button" class="dash-nav-tab" id="btn-dock-autopilot" role="tab" aria-selected="false">Instructions</button>
+        </nav>
+        <div class="dash-nav-spacer" aria-hidden="true"></div>
+      </header>
+      <div class="dash-cyan-line" aria-hidden="true"></div>
+
+      <div class="dash-stage-panels-wrapper">
+        <div id="dash-stage-panel-mission" class="dash-stage-panel active" role="tabpanel" aria-labelledby="btn-dock-mission">
+          <div class="dash-launchpad">
+            <aside class="lp-side-panel">
+              <p class="dash-section-title">Components</p>
+              <div id="overview-components"></div>
+              <div class="lp-prog-wrap">
+                <div class="lp-prog-label">
+                  <span>Diagnostics</span>
+                  <span id="overview-diag-count">—</span>
+                </div>
+                <div class="lp-prog-track"><div class="lp-prog-fill" id="overview-diag-fill"></div></div>
+              </div>
+            </aside>
+            <div class="lp-center">
+              <div class="lp-mascot-wrap">
+                <div class="lp-mascot-glow" aria-hidden="true"></div>
+                <img
+                  class="lp-mascot-img lp-mascot-img--idle"
+                  src="assets/hamster_astronaut.svg"
+                  width="240"
+                  height="280"
+                  alt=""
+                  draggable="false"
+                />
+                <img
+                  class="lp-mascot-img lp-mascot-img--ignited"
+                  src="assets/hamster_astronaut_ignited.png"
+                  width="240"
+                  height="280"
+                  alt=""
+                  draggable="false"
+                />
+              </div>
+              <div class="lp-launch-area">
+                <button type="button" class="lp-launch-btn" id="btn-dash-launch">
+                  <span id="dash-launch-title">Ignite</span>
+                </button>
+                <p class="lp-launch-sub" id="dash-launch-hint">Open Antigravity · Start OrbitPrompter bot</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="dash-stage-panel-diagnostics" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-diagnostics" hidden>
+          <div class="dash-page dash-page--diag">
+            <div id="status-grid" class="diagnostics-mount"></div>
+            <div class="dash-page-footer">
+              <button type="button" class="dash-btn-secondary" id="btn-refresh-status">Refresh</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="dash-stage-panel-remoat" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-remoat" hidden>
+          <div class="dash-page dash-page--configure">
+            <div class="dash-config-grid">
+              <section class="dash-surface">
+                <p class="dash-section-title">Telegram</p>
+                <div class="dash-field">
+                  <label class="dash-field-label" for="dash-remoat-token">Bot token</label>
+                  <input type="password" class="dash-field-input" id="dash-remoat-token" placeholder="Paste token from BotFather" autocomplete="off">
+                  <p class="dash-field-hint">Get from @BotFather</p>
+                </div>
+                <div class="dash-field">
+                  <label class="dash-field-label" for="dash-remoat-user-ids">Allowed user IDs</label>
+                  <input type="text" class="dash-field-input" id="dash-remoat-user-ids" placeholder="123456789">
+                  <p class="dash-field-hint">Comma-separated — get from @userinfobot</p>
+                </div>
+              </section>
+              <section class="dash-surface">
+                <p class="dash-section-title">Workspace</p>
+                <div class="dash-field">
+                  <label class="dash-field-label" for="dash-remoat-workspace">Projects folder</label>
+                  <input type="text" class="dash-field-input" id="dash-remoat-workspace" placeholder="~/Code">
+                  <p class="dash-field-hint">Parent folder for OrbitPrompter /project</p>
+                </div>
+              </section>
+            </div>
+            <div class="dash-page-footer dash-page-footer--end">
+              <button type="button" class="dash-btn-save" id="btn-save-remoat">Save changes</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="dash-stage-panel-autopilot" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-autopilot" hidden>
+          <div class="dash-page dash-page--instructions">
+            <p class="dash-section-title">Agent instructions</p>
+            <p class="dash-field-hint workflow-intro-hint">Workflows become slash commands in Antigravity (<code>/name</code>). Files live in <code>~/.agents/workflows/</code>.</p>
+
+            <div class="workflow-toolbar">
+              <label class="sr-only" for="workflow-select">Select document</label>
+              <select id="workflow-select" class="dash-field-input dash-doc-select workflow-toolbar__select"></select>
+              <div class="workflow-toolbar__actions">
+                <button type="button" class="btn-secondary" id="btn-new-workflow">New workflow</button>
+                <button type="button" class="btn-secondary is-danger" id="btn-delete-workflow" disabled title="Built-in workflows cannot be deleted">Delete</button>
+              </div>
+            </div>
+
+            <div id="workflow-create-panel" class="workflow-create-panel" hidden>
+              <p class="dash-section-title dash-section-title--sm">Create workflow</p>
+              <div class="dash-field">
+                <label class="dash-field-label" for="workflow-new-name">Command name</label>
+                <input type="text" class="dash-field-input" id="workflow-new-name" placeholder="deploy-staging" autocomplete="off">
+                <p class="dash-field-hint">Letters and numbers only — becomes <code>/deploy-staging</code> and <code>deploy-staging.md</code></p>
+              </div>
+              <div class="dash-field">
+                <label class="dash-field-label" for="workflow-new-description">Menu description (optional)</label>
+                <input type="text" class="dash-field-input" id="workflow-new-description" placeholder="Deploy the app to staging" autocomplete="off">
+              </div>
+              <div class="workflow-create-actions">
+                <button type="button" class="btn-secondary" id="btn-cancel-workflow-create">Cancel</button>
+                <button type="button" class="dash-btn-save" id="btn-create-workflow">Create &amp; edit</button>
+              </div>
+            </div>
+
+            <p id="workflow-slash-hint" class="dash-field-hint workflow-slash-hint" hidden></p>
+            <label class="sr-only" for="workflow-editor">Editor</label>
+            <textarea id="workflow-editor" class="dash-doc-editor" spellcheck="false"></textarea>
+            <div class="dash-page-footer dash-page-footer--end workflow-footer">
+              <span id="workflow-status" class="workflow-status" role="status" aria-live="polite"></span>
+              <button type="button" class="dash-btn-save" id="btn-save-workflow">Save document</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
