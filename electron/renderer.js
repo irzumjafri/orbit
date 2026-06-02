@@ -743,7 +743,7 @@ function overviewComponentRow(name, desc, state, statusLabel, staggerIndex = 0) 
   </div>`;
 }
 
-function renderOverview(status, install, docs) {
+async function renderOverview(status, install, docs) {
   const list = document.getElementById('overview-components');
   const countEl = document.getElementById('overview-diag-count');
   const fillEl = document.getElementById('overview-diag-fill');
@@ -795,6 +795,76 @@ function renderOverview(status, install, docs) {
       apLabel,
       2
     );
+
+  // Fetch real model quota data from local language server
+  const quotaRes = await window.api.invoke('dash-model-quota').catch(() => ({ ok: false }));
+
+  const updateTankUI = (id, label, percentage, resetText) => {
+    const valEl = document.getElementById(`fuel-val-${id}`);
+    const fillEl = document.getElementById(`fuel-fill-${id}`);
+    const resetEl = document.getElementById(`fuel-reset-${id}`);
+    const nameEl = document.querySelector(`#tank-${id} .lp-fuel-tank__name`);
+
+    if (nameEl && label) {
+      nameEl.textContent = label;
+    }
+
+    if (valEl && fillEl && resetEl) {
+      valEl.textContent = `${percentage}%`;
+      fillEl.style.width = `${percentage}%`;
+
+      if (percentage > 50) {
+        fillEl.style.background = id === 'gemini' ? 'var(--dash-ok)' : (id === 'claude' ? '#f97316' : '#10b981');
+        fillEl.style.boxShadow = `0 0 12px ${fillEl.style.background}`;
+      } else if (percentage > 20) {
+        fillEl.style.background = 'var(--dash-warn)';
+        fillEl.style.boxShadow = '0 0 8px var(--dash-warn)';
+      } else {
+        fillEl.style.background = '#f87171';
+        fillEl.style.boxShadow = '0 0 8px #f87171';
+      }
+
+      resetEl.textContent = resetText;
+    }
+  };
+
+  if (quotaRes && quotaRes.ok && quotaRes.models) {
+    const geminiModel = quotaRes.models.find(m => m.label.toLowerCase().includes('gemini'));
+    const claudeModel = quotaRes.models.find(m => m.label.toLowerCase().includes('claude'));
+    const gptModel = quotaRes.models.find(m => m.label.toLowerCase().includes('gpt'));
+
+    const formatResetTime = (isoString) => {
+      if (!isoString) return 'reset time unknown';
+      const diffMs = new Date(isoString) - new Date();
+      if (diffMs <= 0) return 'resetting now';
+      const hours = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      return `resets in ${hours}h ${mins}m`;
+    };
+
+    if (geminiModel) {
+      updateTankUI('gemini', geminiModel.label, geminiModel.percentage, formatResetTime(geminiModel.resetTime));
+    } else {
+      updateTankUI('gemini', 'Gemini 3.5', 100, 'no usage info');
+    }
+
+    if (claudeModel) {
+      updateTankUI('claude', claudeModel.label, claudeModel.percentage, formatResetTime(claudeModel.resetTime));
+    } else {
+      updateTankUI('claude', 'Claude 4.6', 100, 'no usage info');
+    }
+
+    if (gptModel) {
+      updateTankUI('gpt', gptModel.label, gptModel.percentage, formatResetTime(gptModel.resetTime));
+    } else {
+      updateTankUI('gpt', 'GPT-OSS', 100, 'no usage info');
+    }
+  } else {
+    // Offline/unavailable fallback
+    updateTankUI('gemini', 'Gemini 3.5', 0, 'IDE Offline');
+    updateTankUI('claude', 'Claude 4.6', 0, 'IDE Offline');
+    updateTankUI('gpt', 'GPT-OSS', 0, 'IDE Offline');
+  }
 }
 
 let dashboardListenersBound = false;
@@ -924,7 +994,7 @@ async function initDashboard() {
         window.api.invoke('dash-install-checks'),
         window.api.invoke('dash-docs-status')
       ]);
-      renderOverview(status, install, docs);
+      await renderOverview(status, install, docs);
     } catch (err) {
       console.error(err);
       const countEl = document.getElementById('overview-diag-count');
