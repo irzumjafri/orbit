@@ -3,6 +3,25 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { $, fs, os } from 'zx';
 import { spawn } from 'child_process';
+
+// Prepend standard developer bin paths to process.env.PATH on macOS and Linux.
+// This resolves the issue where GUI-launched Electron apps cannot locate git, node, supabase, etc.
+if (os.platform() !== 'win32') {
+  const standardPaths = [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+    path.join(os.homedir(), '.npm-global/bin'),
+    path.join(os.homedir(), '.local/bin'),
+    path.join(os.homedir(), 'bin')
+  ];
+  const currentPaths = process.env.PATH ? process.env.PATH.split(path.delimiter) : [];
+  const mergedPaths = Array.from(new Set([...standardPaths, ...currentPaths]));
+  process.env.PATH = mergedPaths.join(path.delimiter);
+}
 import {
   siGit,
   siPython,
