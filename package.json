@@ -1,6 +1,6 @@
 {
   "name": "orbit",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Orbit — desktop setup for Antigravity, OrbitPrompter, and mobile dev tooling",
   "main": "electron/main.js",
   "type": "module",
