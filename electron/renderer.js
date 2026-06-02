@@ -838,7 +838,7 @@ function syncRemoatUi(running, canLaunch) {
 }
 
 async function initDashboard() {
-  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot'];
+  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot', 'limits'];
 
   const setStageTab = (tab) => {
     STAGE_IDS.forEach((id) => {
@@ -981,6 +981,17 @@ async function initDashboard() {
     syncRemoatUi(running, canLaunch);
   };
 
+  const showDashLimits = async () => {
+    setStageTab('limits');
+    const running = await window.api.invoke('dash-remoat-status');
+    const [status, install] = await Promise.all([
+      window.api.invoke('dash-status'),
+      window.api.invoke('dash-install-checks')
+    ]);
+    const canLaunch = !!(status.antigravity && status.remoat && install.remoatConfig);
+    syncRemoatUi(running, canLaunch);
+  };
+
   const dashLaunchOrLand = async () => {
     const running = await window.api.invoke('dash-remoat-status');
     if (running) {
@@ -1023,6 +1034,9 @@ async function initDashboard() {
     });
     document.getElementById('btn-dock-autopilot')?.addEventListener('click', () => {
       void showDashAutopilot();
+    });
+    document.getElementById('btn-dock-limits')?.addEventListener('click', () => {
+      void showDashLimits();
     });
     document.getElementById('btn-dash-launch').addEventListener('click', () => {
       void dashLaunchOrLand();
