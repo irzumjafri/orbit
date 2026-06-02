@@ -45,7 +45,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npx electron-builder --mac --config.mac.identity=null
+            npx electron-builder --mac -c.mac.identity=null -c.mac.signingAllowed=false
           else
             npx electron-builder --win
           fi
