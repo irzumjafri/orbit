@@ -400,7 +400,15 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
   };
 
   const container = document.getElementById('steps-container');
-  renderInstallStepRows(container, stepDefs);
+  container.innerHTML = '';
+  const panel = document.querySelector('.wiz-panel--progress');
+  if (panel) {
+    panel.style.display = 'none'; // Hide the whole panel during installation for a super clean view
+    const listEl = panel.querySelector('.wiz-progress-list');
+    if (listEl) {
+      listEl.style.display = 'flex'; // Restore in case it was hidden on a previous successful run
+    }
+  }
 
   const total = stepDefs.length;
   const progressTrack = document.getElementById('progress-track');
@@ -409,18 +417,8 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
 
   for (let i = 0; i < stepDefs.length; i++) {
     const step = stepDefs[i];
-    const icon = document.getElementById(`icon-${step.id}`);
-    const msg = document.getElementById(`msg-${step.id}`);
-    const row = container.querySelector(`[data-step-id="${step.id}"]`);
 
     setInstallProgressUI({ index: i, total, label: step.label, phase: 'run' });
-    if (row) {
-      row.classList.add('is-active');
-      row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-
-    icon.className = 'wiz-step-icon running';
-    msg.innerText = 'In progress…';
 
     let data = null;
     if (step.id === 'clis') data = selectedTools;
@@ -430,18 +428,21 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
 
     const result = await window.api.installStep(step.id, data);
 
-    if (row) row.classList.remove('is-active');
-
     if (result.status === 'success') {
-      icon.className = 'wiz-step-icon success';
-      icon.innerHTML = '✓';
-      flashStepSuccess(icon);
-      msg.innerText = result.message;
       setInstallProgressUI({ index: i + 1, total, label: step.label, phase: 'run' });
     } else {
-      icon.className = 'wiz-step-icon error';
-      icon.innerHTML = '✕';
-      msg.innerText = result.message;
+      if (panel) {
+        panel.style.display = 'flex';
+      }
+      container.innerHTML = `
+        <div class="wiz-step-item" style="border: 1px solid rgba(248, 113, 113, 0.25); padding: 16px; border-radius: 10px; background: rgba(248, 113, 113, 0.05); text-align: left; width: 100%; box-sizing: border-box;">
+          <div style="font-weight: 600; color: #f87171; margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; background: rgba(248, 113, 113, 0.15); border-radius: 50%; color: #f87171; font-size: 10px; border: 1px solid rgba(248, 113, 113, 0.3);">✕</span>
+            Error installing: ${step.label}
+          </div>
+          <pre style="margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px; color: #fca5a5; line-height: 1.5; text-align: left; background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.04); overflow-x: auto;">${escapeHtml(result.message)}</pre>
+        </div>
+      `;
       btnFinish.style.display = 'inline-flex';
       progressTitle.innerText = failTitle;
       progressTitle.classList.remove('wiz-progress-title--done');
@@ -453,6 +454,14 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
   }
 
   progressTrack?.classList.remove('is-active');
+  if (panel) {
+    panel.style.display = 'flex';
+    // Remove the body structure but keep the footer centered
+    const listEl = panel.querySelector('.wiz-progress-list');
+    if (listEl) {
+      listEl.style.display = 'none';
+    }
+  }
   btnFinish.style.display = 'inline-flex';
   setInstallProgressUI({ index: total, total, label: doneTitle, phase: 'done' });
   progressTitle.innerText = doneTitle;
