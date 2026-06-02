@@ -1054,6 +1054,7 @@ async function initDashboard() {
     });
     document.getElementById('btn-dock-autopilot')?.addEventListener('click', () => {
       void showDashAutopilot();
+    });
     document.getElementById('btn-dash-launch').addEventListener('click', () => {
       void dashLaunchOrLand();
     });
