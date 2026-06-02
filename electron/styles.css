@@ -3191,6 +3191,10 @@ body:has(#wiz-shell) .titlebar__title {
   transform: scale(0.7) translateY(40px) rotate(-10deg);
 }
 
+.lp-mascot-wrap.is-ignited {
+  animation: dash-mascot-ignited-shake 0.12s ease-in-out infinite alternate;
+}
+
 .lp-mascot-wrap.is-ignited .lp-mascot-img--idle {
   opacity: 0;
   transform: scale(0.7) translateY(-40px) rotate(10deg);
@@ -3201,12 +3205,11 @@ body:has(#wiz-shell) .titlebar__title {
   opacity: 1;
   transform: scale(1.05) translateY(0);
   filter: drop-shadow(0 20px 56px rgba(56, 189, 248, 0.65)) drop-shadow(0 0 24px rgba(99, 102, 241, 0.45));
-  animation: dash-mascot-ignited-shake 0.1s ease-in-out infinite alternate;
 }
 
 @keyframes dash-mascot-ignited-shake {
-  0% { transform: translate(1px, 1.5px) rotate(0.5deg); }
-  100% { transform: translate(-1px, -1.5px) rotate(-0.5deg); }
+  0% { transform: translate(1px, 1.5px) rotate(0.3deg); }
+  100% { transform: translate(-1px, -1.5px) rotate(-0.3deg); }
 }
 
 /* Lively background warp speed animations when ignited */
