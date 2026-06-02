@@ -240,6 +240,20 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Helper to check if an installation error is simply because the package is already installed
+function isAlreadyInstalledError(err) {
+  const errMsg = String(err.stdout || '') + '\n' + String(err.stderr || '') + '\n' + String(err.message || '');
+  const lower = errMsg.toLowerCase();
+  return (
+    lower.includes('already installed') ||
+    lower.includes('already-to-date') ||
+    lower.includes('no available upgrade found') ||
+    lower.includes('no newer package versions are available') ||
+    lower.includes('already up-to-date') ||
+    lower.includes('is already installed')
+  );
+}
+
 // Setup IPC handlers
 ipcMain.handle('install-step', async (event, step, data) => {
   try {
@@ -258,11 +272,37 @@ ipcMain.handle('install-step', async (event, step, data) => {
       case 'clis':
         if (isMac) {
           const brewPackages = ['git', 'python', 'node', 'supabase/tap/supabase'].filter(pkg => data.some(t => pkg.includes(t)));
-          if (brewPackages.length > 0) await $`brew install ${brewPackages}`;
+          if (brewPackages.length > 0) {
+            try {
+              await $`brew install ${brewPackages}`;
+            } catch (e) {
+              if (!isAlreadyInstalledError(e)) {
+                throw e;
+              }
+            }
+          }
         } else if (isWindows) {
-          if (data.includes('git')) await $`winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements`;
-          if (data.includes('python')) await $`winget install --id Python.Python.3.11 -e --accept-package-agreements --accept-source-agreements`;
-          if (data.includes('node')) await $`winget install --id OpenJS.NodeJS -e --accept-package-agreements --accept-source-agreements`;
+          if (data.includes('git')) {
+            try {
+              await $`winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements`;
+            } catch (e) {
+              if (!isAlreadyInstalledError(e)) throw e;
+            }
+          }
+          if (data.includes('python')) {
+            try {
+              await $`winget install --id Python.Python.3.11 -e --accept-package-agreements --accept-source-agreements`;
+            } catch (e) {
+              if (!isAlreadyInstalledError(e)) throw e;
+            }
+          }
+          if (data.includes('node')) {
+            try {
+              await $`winget install --id OpenJS.NodeJS -e --accept-package-agreements --accept-source-agreements`;
+            } catch (e) {
+              if (!isAlreadyInstalledError(e)) throw e;
+            }
+          }
         }
         const npmPackages = ['eas-cli', 'orbitprompter', 'tmole'].filter((pkg) => data.includes(pkg));
         if (npmPackages.length > 0) {
