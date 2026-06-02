@@ -3651,11 +3651,42 @@ html[data-platform='darwin'] .dash-nav {
   color: var(--dash-text-label);
   font-family: inherit;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.dash-field-input:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: linear-gradient(180deg, rgba(18, 26, 44, 0.98) 0%, rgba(10, 14, 24, 0.99) 100%);
 }
 
 .dash-field-input:focus {
   outline: none;
-  border-color: rgba(56, 189, 248, 0.25);
+  border-color: var(--dash-accent);
+  box-shadow: 0 0 0 3px var(--dash-accent-dim), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, rgba(18, 26, 44, 0.98) 0%, rgba(10, 14, 24, 0.99) 100%);
+}
+
+/* Custom styled Select Dropdown */
+select.dash-field-input {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+select.dash-field-input option {
+  background-color: #0c121f;
+  color: var(--dash-text-label);
+  padding: 8px;
+}
+
+select.dash-field-input optgroup {
+  background-color: #0c121f;
+  color: var(--dash-accent);
+  font-weight: 600;
 }
 
 .dash-field-hint {
