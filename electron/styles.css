@@ -18,7 +18,7 @@
   --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.24);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   /* Title bar: matches Electron chrome + hiddenInset on macOS */
-  --titlebar-height: 48px;
+  --titlebar-height: 0px;
   /* Orbit dashboard: status + launch track content width (parent caps max) */
   --dash-home-column-width: 100%;
   /* legacy aliases */
@@ -2191,6 +2191,12 @@ input[type="text"]:focus {
   background: var(--dash-page);
   color: var(--dash-text);
   overflow: hidden;
+  -webkit-app-region: drag; /* Window dragging handle */
+}
+
+/* Ensure wizard cards, forms, inputs, and indicators do not drag the window */
+.wiz-shell.dash-executive > * {
+  -webkit-app-region: no-drag;
 }
 
 body:has(#view-dashboard.active) #wiz-shell {
@@ -2882,13 +2888,19 @@ body:has(#wiz-shell) .titlebar__title {
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--dash-border);
   z-index: 10;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag; /* Draggable navigation bar */
+}
+
+/* macOS + titleBarStyle hiddenInset: leave room for traffic lights */
+html[data-platform='darwin'] .dash-nav {
+  padding-left: 88px;
 }
 
 .dash-nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  -webkit-app-region: no-drag; /* Clickable brand area */
 }
 
 .dash-nav-logo {
@@ -2907,6 +2919,7 @@ body:has(#wiz-shell) .titlebar__title {
 .dash-nav-tabs {
   display: flex;
   gap: 2px;
+  -webkit-app-region: no-drag; /* Clickable tabs area */
 }
 
 .dash-nav-tab {
