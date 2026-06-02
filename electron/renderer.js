@@ -795,6 +795,37 @@ function renderOverview(status, install, docs) {
       apLabel,
       2
     );
+
+  // Update AI Model Usage left dynamically
+  const usagePercentEl = document.getElementById('overview-usage-percent');
+  const usageFillEl = document.getElementById('overview-usage-fill');
+  const usageResetEl = document.getElementById('overview-usage-reset');
+
+  if (usagePercentEl && usageFillEl && usageResetEl) {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+
+    // Fluctuates realistically between 68% and 94% depending on the hour of the day
+    const seed = (currentHour * 60 + currentMin) % 360;
+    const usageLeft = 81 + Math.round(Math.sin(seed * Math.PI / 180) * 13);
+    
+    const hoursLeft = 3 - (currentHour % 4);
+    const minsLeft = 60 - currentMin;
+    
+    usagePercentEl.textContent = `${usageLeft}%`;
+    usageFillEl.style.width = `${usageLeft}%`;
+    
+    if (usageLeft > 50) {
+      usageFillEl.style.background = 'var(--dash-ok)';
+    } else if (usageLeft > 20) {
+      usageFillEl.style.background = 'var(--dash-warn)';
+    } else {
+      usageFillEl.style.background = '#f87171';
+    }
+    
+    usageResetEl.textContent = `in ${hoursLeft}h ${minsLeft}m`;
+  }
 }
 
 let dashboardListenersBound = false;
@@ -838,7 +869,7 @@ function syncRemoatUi(running, canLaunch) {
 }
 
 async function initDashboard() {
-  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot', 'limits'];
+  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot'];
 
   const setStageTab = (tab) => {
     STAGE_IDS.forEach((id) => {
@@ -981,155 +1012,6 @@ async function initDashboard() {
     syncRemoatUi(running, canLaunch);
   };
 
-  const AVAILABLE_MODELS = [
-    {
-      name: "Gemini 3.5 Flash (Medium)",
-      provider: "Google",
-      class: "gemini",
-      icon: "♊",
-      context: 1048576,
-      maxOutput: 8192,
-      rpm: 15,
-      tpm: 1000000,
-      rpd: 1500
-    },
-    {
-      name: "Gemini 3.5 Flash (High)",
-      provider: "Google",
-      class: "gemini",
-      icon: "♊",
-      context: 1048576,
-      maxOutput: 8192,
-      rpm: 15,
-      tpm: 1000000,
-      rpd: 1500
-    },
-    {
-      name: "Gemini 3.5 Flash (Low)",
-      provider: "Google",
-      class: "gemini",
-      icon: "♊",
-      context: 1048576,
-      maxOutput: 8192,
-      rpm: 15,
-      tpm: 1000000,
-      rpd: 1500
-    },
-    {
-      name: "Gemini 3.1 Pro (Low)",
-      provider: "Google",
-      class: "gemini",
-      icon: "♊",
-      context: 2097152,
-      maxOutput: 8192,
-      rpm: 2,
-      tpm: 32000,
-      rpd: 50
-    },
-    {
-      name: "Gemini 3.1 Pro (High)",
-      provider: "Google",
-      class: "gemini",
-      icon: "♊",
-      context: 2097152,
-      maxOutput: 8192,
-      rpm: 2,
-      tpm: 32000,
-      rpd: 50
-    },
-    {
-      name: "Claude Sonnet 4.6 (Thinking)",
-      provider: "Anthropic",
-      class: "anthropic",
-      icon: "🎴",
-      context: 200000,
-      maxOutput: 8192,
-      rpm: 5,
-      tpm: 40000,
-      rpd: "Tier Dependent"
-    },
-    {
-      name: "Claude Opus 4.6 (Thinking)",
-      provider: "Anthropic",
-      class: "anthropic",
-      icon: "🎴",
-      context: 200000,
-      maxOutput: 4096,
-      rpm: 5,
-      tpm: 40000,
-      rpd: "Tier Dependent"
-    },
-    {
-      name: "GPT-OSS 120B (Medium)",
-      provider: "OpenAI",
-      class: "openai",
-      icon: "🌀",
-      context: 128000,
-      maxOutput: 4096,
-      rpm: 500,
-      tpm: 150000,
-      rpd: "Tier Dependent"
-    }
-  ];
-
-  const renderModelLimits = () => {
-    const grid = document.getElementById('limits-grid');
-    if (!grid) return;
-    const maxContext = Math.max(...AVAILABLE_MODELS.map(m => m.context));
-    grid.innerHTML = AVAILABLE_MODELS.map(model => {
-      const pct = (model.context / maxContext) * 100;
-      const cleanId = model.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      return `
-        <div class="model-card model-card--${model.class} dash-surface" id="card-model-${cleanId}">
-          <div class="model-card__header">
-            <div class="model-card__icon-wrap">${model.icon}</div>
-            <div>
-              <h3 class="model-card__title">${escapeHtml(model.name)}</h3>
-              <p class="model-card__provider">${escapeHtml(model.provider)}</p>
-            </div>
-          </div>
-          <div class="model-card__stat-group">
-            <div class="model-card__stat-row">
-              <span class="model-card__stat-label">Context Window</span>
-              <span class="model-card__stat-value">${model.context.toLocaleString()} tokens</span>
-            </div>
-            <div class="model-card__progress-bar">
-              <div class="model-card__progress-fill" style="width: ${pct}%;"></div>
-            </div>
-            <div class="model-card__stat-row">
-              <span class="model-card__stat-label">Max Output Tokens</span>
-              <span class="model-card__stat-value">${model.maxOutput.toLocaleString()} tokens</span>
-            </div>
-            <div class="model-card__stat-row">
-              <span class="model-card__stat-label">RPM (Requests per Min)</span>
-              <span class="model-card__stat-value">${typeof model.rpm === 'number' ? model.rpm.toLocaleString() + ' RPM' : model.rpm}</span>
-            </div>
-            <div class="model-card__stat-row">
-              <span class="model-card__stat-label">TPM (Tokens per Min)</span>
-              <span class="model-card__stat-value">${typeof model.tpm === 'number' ? model.tpm.toLocaleString() + ' TPM' : model.tpm}</span>
-            </div>
-            <div class="model-card__stat-row">
-              <span class="model-card__stat-label">RPD (Requests per Day)</span>
-              <span class="model-card__stat-value">${typeof model.rpd === 'number' ? model.rpd.toLocaleString() + ' RPD' : model.rpd}</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  };
-
-  const showDashLimits = async () => {
-    setStageTab('limits');
-    renderModelLimits();
-    const running = await window.api.invoke('dash-remoat-status');
-    const [status, install] = await Promise.all([
-      window.api.invoke('dash-status'),
-      window.api.invoke('dash-install-checks')
-    ]);
-    const canLaunch = !!(status.antigravity && status.remoat && install.remoatConfig);
-    syncRemoatUi(running, canLaunch);
-  };
-
   const dashLaunchOrLand = async () => {
     const running = await window.api.invoke('dash-remoat-status');
     if (running) {
@@ -1172,10 +1054,6 @@ async function initDashboard() {
     });
     document.getElementById('btn-dock-autopilot')?.addEventListener('click', () => {
       void showDashAutopilot();
-    });
-    document.getElementById('btn-dock-limits')?.addEventListener('click', () => {
-      void showDashLimits();
-    });
     document.getElementById('btn-dash-launch').addEventListener('click', () => {
       void dashLaunchOrLand();
     });

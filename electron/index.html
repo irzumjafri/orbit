@@ -164,7 +164,6 @@
           <button type="button" class="dash-nav-tab" id="btn-dock-diagnostics" role="tab" aria-selected="false">Diagnostics</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-remoat" role="tab" aria-selected="false">Configure</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-autopilot" role="tab" aria-selected="false">Instructions</button>
-          <button type="button" class="dash-nav-tab" id="btn-dock-limits" role="tab" aria-selected="false">Model Limits</button>
         </nav>
         <div class="dash-nav-spacer" aria-hidden="true"></div>
       </header>
@@ -182,6 +181,17 @@
                   <span id="overview-diag-count">—</span>
                 </div>
                 <div class="lp-prog-track"><div class="lp-prog-fill" id="overview-diag-fill"></div></div>
+              </div>
+              <div class="lp-prog-wrap lp-usage-wrap">
+                <div class="lp-prog-label">
+                  <span>Usage Left</span>
+                  <span id="overview-usage-percent">82%</span>
+                </div>
+                <div class="lp-prog-track"><div class="lp-prog-fill" id="overview-usage-fill" style="width: 82%;"></div></div>
+                <div class="lp-usage-reset-row">
+                  <span>Next reset</span>
+                  <span id="overview-usage-reset">in 2h 45m</span>
+                </div>
               </div>
             </aside>
             <div class="lp-center">
@@ -292,13 +302,6 @@
               <span id="workflow-status" class="workflow-status" role="status" aria-live="polite"></span>
               <button type="button" class="dash-btn-save" id="btn-save-workflow">Save document</button>
             </div>
-          </div>
-        </div>
-
-        <div id="dash-stage-panel-limits" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-limits" hidden>
-          <div class="dash-page dash-page--limits">
-            <p class="dash-section-title">AI Model Specifications &amp; Rate Limits</p>
-            <div class="limits-grid" id="limits-grid"></div>
           </div>
         </div>
       </div>
