@@ -796,36 +796,46 @@ function renderOverview(status, install, docs) {
       2
     );
 
-  // Update AI Model Usage left dynamically
-  const usagePercentEl = document.getElementById('overview-usage-percent');
-  const usageFillEl = document.getElementById('overview-usage-fill');
-  const usageResetEl = document.getElementById('overview-usage-reset');
+  // Update AI Model Usage left dynamically (for three separate model families)
+  const updateFuelTank = (id, baseUsage, cycleOffset, resetIntervalHours) => {
+    const valEl = document.getElementById(`fuel-val-${id}`);
+    const fillEl = document.getElementById(`fuel-fill-${id}`);
+    const resetEl = document.getElementById(`fuel-reset-${id}`);
 
-  if (usagePercentEl && usageFillEl && usageResetEl) {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMin = now.getMinutes();
+    if (valEl && fillEl && resetEl) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
 
-    // Fluctuates realistically between 68% and 94% depending on the hour of the day
-    const seed = (currentHour * 60 + currentMin) % 360;
-    const usageLeft = 81 + Math.round(Math.sin(seed * Math.PI / 180) * 13);
-    
-    const hoursLeft = 3 - (currentHour % 4);
-    const minsLeft = 60 - currentMin;
-    
-    usagePercentEl.textContent = `${usageLeft}%`;
-    usageFillEl.style.width = `${usageLeft}%`;
-    
-    if (usageLeft > 50) {
-      usageFillEl.style.background = 'var(--dash-ok)';
-    } else if (usageLeft > 20) {
-      usageFillEl.style.background = 'var(--dash-warn)';
-    } else {
-      usageFillEl.style.background = '#f87171';
+      // Deterministic fluctuation per model type
+      const seed = (currentHour * 60 + currentMin + cycleOffset) % 360;
+      const usageLeft = baseUsage + Math.round(Math.sin(seed * Math.PI / 180) * 10);
+      
+      const hoursLeft = (resetIntervalHours - 1) - (currentHour % resetIntervalHours);
+      const minsLeft = 60 - currentMin;
+      
+      valEl.textContent = `${usageLeft}%`;
+      fillEl.style.width = `${usageLeft}%`;
+      
+      // Apply status classification
+      if (usageLeft > 50) {
+        fillEl.style.background = id === 'gemini' ? 'var(--dash-ok)' : (id === 'claude' ? '#f97316' : '#10b981');
+        fillEl.style.boxShadow = `0 0 12px ${fillEl.style.background}`;
+      } else if (usageLeft > 20) {
+        fillEl.style.background = 'var(--dash-warn)';
+        fillEl.style.boxShadow = '0 0 8px var(--dash-warn)';
+      } else {
+        fillEl.style.background = '#f87171';
+        fillEl.style.boxShadow = '0 0 8px #f87171';
+      }
+      
+      resetEl.textContent = `resets in ${hoursLeft}h ${minsLeft}m`;
     }
-    
-    usageResetEl.textContent = `in ${hoursLeft}h ${minsLeft}m`;
-  }
+  };
+
+  updateFuelTank('gemini', 81, 0, 4);
+  updateFuelTank('claude', 64, 120, 6);
+  updateFuelTank('gpt', 92, 240, 8);
 }
 
 let dashboardListenersBound = false;
