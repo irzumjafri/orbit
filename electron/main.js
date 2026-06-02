@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 if (os.platform() === 'win32') {
   usePowerShell();
 }
+$.verbose = false; // Disable zx verbose output to avoid long logs in the console
 
 // Prepend standard developer bin paths to process.env.PATH on macOS and Linux.
 // This resolves the issue where GUI-launched Electron apps cannot locate git, node, supabase, etc.
@@ -254,72 +255,163 @@ function isAlreadyInstalledError(err) {
   );
 }
 
+// Helper to check if a component is already installed
+async function isComponentInstalled(step, data) {
+  try {
+    switch (step) {
+      case 'homebrew':
+        if (isWindows) return true;
+        await $`brew --version`;
+        return true;
+      case 'git':
+        await $`git --version`;
+        return true;
+      case 'python':
+        try {
+          await $`python3 --version`;
+          return true;
+        } catch {
+          await $`python --version`;
+          return true;
+        }
+      case 'node':
+        await $`node --version`;
+        return true;
+      case 'supabase':
+        await $`supabase --version`;
+        return true;
+      case 'eas-cli':
+        await $`eas --version`;
+        return true;
+      case 'tmole':
+        await $`tmole --version`;
+        return true;
+      case 'orbitprompter':
+        await $`orbitprompter --version`;
+        return true;
+      case 'antigravity':
+        return !!resolveAntigravityInstall(os.platform());
+      case 'path': {
+        if (isWindows) return true;
+        const rcPath = path.join(homeDir, process.env.SHELL?.includes('zsh') ? '.zshrc' : '.bashrc');
+        if (!fs.existsSync(rcPath)) return false;
+        const content = await fs.readFile(rcPath, 'utf8');
+        return content.includes('export PATH="$HOME/.npm-global/bin:$PATH"') || content.includes('# Orbit additions');
+      }
+      case 'mcps': {
+        const agDir = path.join(homeDir, '.gemini', 'antigravity');
+        const mcpConfigPath = path.join(agDir, 'mcp_config.json');
+        if (!fs.existsSync(mcpConfigPath)) return false;
+        const content = await fs.readFile(mcpConfigPath, 'utf8');
+        return content.includes('"github"') && content.includes('"supabase"');
+      }
+      case 'remoat':
+      case 'orbitprompter-config': {
+        const p = orbitInstallPaths();
+        if (!fs.existsSync(p.orbitPrompterConfigJson)) return false;
+        const config = readOrbitPrompterConfigJson();
+        return !!config.telegramBotToken && config.allowedUserIds?.length > 0;
+      }
+      case 'scaffold-gemini':
+        return fs.existsSync(path.join(homeDir, '.gemini', 'GEMINI.md'));
+      case 'scaffold-wf-feature':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'feature.md'));
+      case 'scaffold-wf-submit':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'submit.md'));
+      case 'scaffold-wf-test':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'test.md'));
+      case 'scaffold-wf-project-creator':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'project-creator.md'));
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 // Setup IPC handlers
 ipcMain.handle('install-step', async (event, step, data) => {
   try {
+    // Check if the component is already installed to skip it
+    const alreadyInstalled = await isComponentInstalled(step, data);
+    if (alreadyInstalled) {
+      return { status: 'success', message: 'Already installed (skipped)' };
+    }
+
     switch (step) {
       case 'homebrew':
         if (isWindows) {
           return { status: 'success', message: 'Skipped Homebrew (Using Winget)' };
         }
         try {
-          await $`brew --version`;
-          return { status: 'success', message: 'Homebrew already installed' };
-        } catch {
           await $`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
           return { status: 'success', message: 'Homebrew installed successfully' };
+        } catch (e) {
+          throw new Error('Homebrew installation failed: ' + (e.stderr || e.message || String(e)));
         }
-      case 'clis':
-        if (isMac) {
-          const brewPackages = ['git', 'python', 'node', 'supabase/tap/supabase'].filter(pkg => data.some(t => pkg.includes(t)));
-          if (brewPackages.length > 0) {
-            try {
-              await $`brew install ${brewPackages}`;
-            } catch (e) {
-              if (!isAlreadyInstalledError(e)) {
-                throw e;
-              }
-            }
+
+      case 'git':
+        try {
+          if (isMac) {
+            await $`brew install git`;
+          } else if (isWindows) {
+            await $`winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements`;
           }
-        } else if (isWindows) {
-          if (data.includes('git')) {
-            try {
-              await $`winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements`;
-            } catch (e) {
-              if (!isAlreadyInstalledError(e)) throw e;
-            }
-          }
-          if (data.includes('python')) {
-            try {
-              await $`winget install --id Python.Python.3.11 -e --accept-package-agreements --accept-source-agreements`;
-            } catch (e) {
-              if (!isAlreadyInstalledError(e)) throw e;
-            }
-          }
-          if (data.includes('node')) {
-            try {
-              await $`winget install --id OpenJS.NodeJS -e --accept-package-agreements --accept-source-agreements`;
-            } catch (e) {
-              if (!isAlreadyInstalledError(e)) throw e;
-            }
-          }
+          return { status: 'success', message: 'Git installed successfully' };
+        } catch (e) {
+          if (!isAlreadyInstalledError(e)) throw new Error('Git install failed: ' + (e.stderr || e.message || String(e)));
+          return { status: 'success', message: 'Git already installed' };
         }
-        const npmPackages = ['eas-cli', 'orbitprompter', 'tmole'].filter((pkg) => data.includes(pkg));
-        if (npmPackages.length > 0) {
-          if (npmPackages.includes('orbitprompter')) {
-            try {
-              await $`npm uninstall -g remoat`;
-            } catch (e) {
-              // Ignore if not installed
-            }
+
+      case 'python':
+        try {
+          if (isMac) {
+            await $`brew install python`;
+          } else if (isWindows) {
+            await $`winget install --id Python.Python.3.11 -e --accept-package-agreements --accept-source-agreements`;
           }
+          return { status: 'success', message: 'Python installed successfully' };
+        } catch (e) {
+          if (!isAlreadyInstalledError(e)) throw new Error('Python install failed: ' + (e.stderr || e.message || String(e)));
+          return { status: 'success', message: 'Python already installed' };
+        }
+
+      case 'node':
+        try {
+          if (isMac) {
+            await $`brew install node`;
+          } else if (isWindows) {
+            await $`winget install --id OpenJS.NodeJS -e --accept-package-agreements --accept-source-agreements`;
+          }
+          return { status: 'success', message: 'Node.js installed successfully' };
+        } catch (e) {
+          if (!isAlreadyInstalledError(e)) throw new Error('Node.js install failed: ' + (e.stderr || e.message || String(e)));
+          return { status: 'success', message: 'Node.js already installed' };
+        }
+
+      case 'supabase':
+        try {
+          if (isMac) {
+            await $`brew install supabase/tap/supabase`;
+          }
+          return { status: 'success', message: 'Supabase CLI installed successfully' };
+        } catch (e) {
+          if (!isAlreadyInstalledError(e)) throw new Error('Supabase CLI install failed: ' + (e.stderr || e.message || String(e)));
+          return { status: 'success', message: 'Supabase CLI already installed' };
+        }
+
+      case 'eas-cli':
+        try {
           if (isWindows) {
-            await $`npm install -g ${npmPackages}`;
+            await $`npm install -g eas-cli`;
           } else {
-            await $`export PATH="$HOME/.npm-global/bin:$PATH" && npm install -g ${npmPackages}`;
+            await $`export PATH="$HOME/.npm-global/bin:$PATH" && npm install -g eas-cli`;
           }
+          return { status: 'success', message: 'EAS CLI installed successfully' };
+        } catch (e) {
+          throw new Error('EAS CLI install failed: ' + (e.stderr || e.message || String(e)));
         }
-        return { status: 'success', message: 'CLIs installed successfully' };
+
       case 'tmole':
         try {
           if (isWindows) {
@@ -327,68 +419,84 @@ ipcMain.handle('install-step', async (event, step, data) => {
           } else {
             await $`export PATH="$HOME/.npm-global/bin:$PATH" && npm install -g tmole`;
           }
-          return { status: 'success', message: 'tmole installed (run `tmole http://127.0.0.1:PORT` for public URLs)' };
+          return { status: 'success', message: 'tmole installed successfully' };
         } catch (e) {
-          return { status: 'error', message: e?.message || String(e) };
+          throw new Error('tmole install failed: ' + (e.stderr || e.message || String(e)));
         }
-      case 'antigravity':
-        if (data) {
+
+      case 'orbitprompter':
+        try {
           try {
-            const { url, platformKey } = await resolveAntigravityIdeDownloadUrl(os.platform(), os.arch());
-            if (isMac) {
-              const dmgPath = path.join(os.tmpdir(), 'Antigravity-IDE.dmg');
-              const mountPoint = path.join(os.tmpdir(), 'orbit-antigravity-ide-mount');
-              await $`curl -fsSL ${url} -o ${dmgPath}`;
-              await fs.mkdir(mountPoint, { recursive: true });
-              try {
-                await $`hdiutil attach ${dmgPath} -mountpoint ${mountPoint} -nobrowse -quiet`;
-                const entries = await fs.readdir(mountPoint);
-                const appBundle = entries.find((name) => name.endsWith('.app'));
-                if (!appBundle) {
-                  throw new Error('Antigravity IDE disk image did not contain a .app bundle');
-                }
-                await $`cp -R ${path.join(mountPoint, appBundle)} /Applications/`;
-              } finally {
-                await $`hdiutil detach ${mountPoint} -quiet`.catch(() => {});
-              }
-              return {
-                status: 'success',
-                message: `Antigravity IDE installed from ${ANTIGRAVITY_DOWNLOAD_PAGE} (${platformKey})`
-              };
-            }
-            if (isWindows) {
-              const tempExe = path.join(os.tmpdir(), 'Antigravity-IDE-setup.exe');
-              await $`curl -fsSL ${url} -o ${tempExe}`;
-              await $`& ${tempExe} /S`;
-              return {
-                status: 'success',
-                message: `Antigravity IDE installed from ${ANTIGRAVITY_DOWNLOAD_PAGE} (${platformKey})`
-              };
-            }
-            if (isLinux) {
-              const installDir = path.join(homeDir, '.local', 'share', 'antigravity-ide');
-              const archive = path.join(os.tmpdir(), 'Antigravity-IDE.tar.gz');
-              await $`curl -fsSL ${url} -o ${archive}`;
-              await fs.mkdir(installDir, { recursive: true });
-              await $`tar -xzf ${archive} -C ${installDir}`;
-              return {
-                status: 'success',
-                message: `Antigravity IDE extracted to ${installDir}. Set ANTIGRAVITY_PATH in .env to the IDE binary (see ${ANTIGRAVITY_DOWNLOAD_PAGE}).`
-              };
-            }
-            return {
-              status: 'error',
-              message: `Automatic install is not supported on ${os.platform()}. Download Antigravity IDE from ${ANTIGRAVITY_DOWNLOAD_PAGE}.`
-            };
+            await $`npm uninstall -g remoat`;
           } catch (e) {
-            await shell.openExternal(ANTIGRAVITY_DOWNLOAD_PAGE).catch(() => {});
+            // Ignore if not installed
+          }
+          if (isWindows) {
+            await $`npm install -g orbitprompter`;
+          } else {
+            await $`export PATH="$HOME/.npm-global/bin:$PATH" && npm install -g orbitprompter`;
+          }
+          return { status: 'success', message: 'OrbitPrompter CLI installed successfully' };
+        } catch (e) {
+          throw new Error('OrbitPrompter CLI install failed: ' + (e.stderr || e.message || String(e)));
+        }
+
+      case 'antigravity':
+        try {
+          const { url, platformKey } = await resolveAntigravityIdeDownloadUrl(os.platform(), os.arch());
+          if (isMac) {
+            const dmgPath = path.join(os.tmpdir(), 'Antigravity-IDE.dmg');
+            const mountPoint = path.join(os.tmpdir(), 'orbit-antigravity-ide-mount');
+            await $`curl -fsSL ${url} -o ${dmgPath}`;
+            await fs.mkdir(mountPoint, { recursive: true });
+            try {
+              await $`hdiutil attach ${dmgPath} -mountpoint ${mountPoint} -nobrowse -quiet`;
+              const entries = await fs.readdir(mountPoint);
+              const appBundle = entries.find((name) => name.endsWith('.app'));
+              if (!appBundle) {
+                throw new Error('Antigravity IDE disk image did not contain a .app bundle');
+              }
+              await $`cp -R ${path.join(mountPoint, appBundle)} /Applications/`;
+            } finally {
+              await $`hdiutil detach ${mountPoint} -quiet`.catch(() => {});
+            }
             return {
-              status: 'error',
-              message: `${e?.message || String(e)} — opened ${ANTIGRAVITY_DOWNLOAD_PAGE} in your browser.`
+              status: 'success',
+              message: `Antigravity IDE installed from ${ANTIGRAVITY_DOWNLOAD_PAGE} (${platformKey})`
             };
           }
+          if (isWindows) {
+            const tempExe = path.join(os.tmpdir(), 'Antigravity-IDE-setup.exe');
+            await $`curl.exe -fsSL ${url} -o ${tempExe}`;
+            await $`Start-Process -FilePath ${tempExe} -ArgumentList "/S" -Wait`;
+            return {
+              status: 'success',
+              message: `Antigravity IDE installed from ${ANTIGRAVITY_DOWNLOAD_PAGE} (${platformKey})`
+            };
+          }
+          if (isLinux) {
+            const installDir = path.join(homeDir, '.local', 'share', 'antigravity-ide');
+            const archive = path.join(os.tmpdir(), 'Antigravity-IDE.tar.gz');
+            await $`curl -fsSL ${url} -o ${archive}`;
+            await fs.mkdir(installDir, { recursive: true });
+            await $`tar -xzf ${archive} -C ${installDir}`;
+            return {
+              status: 'success',
+              message: `Antigravity IDE extracted to ${installDir}. Set ANTIGRAVITY_PATH in .env to the IDE binary (see ${ANTIGRAVITY_DOWNLOAD_PAGE}).`
+            };
+          }
+          return {
+            status: 'error',
+            message: `Automatic install is not supported on ${os.platform()}. Download Antigravity IDE from ${ANTIGRAVITY_DOWNLOAD_PAGE}.`
+          };
+        } catch (e) {
+          await shell.openExternal(ANTIGRAVITY_DOWNLOAD_PAGE).catch(() => {});
+          return {
+            status: 'error',
+            message: `${e?.message || String(e)} — opened ${ANTIGRAVITY_DOWNLOAD_PAGE} in your browser.`
+          };
         }
-        return { status: 'success', message: 'Skipped Antigravity IDE install' };
+
       case 'path':
         if (isWindows) {
           return { status: 'success', message: 'Paths handled by installers on Windows' };

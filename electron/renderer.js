@@ -283,14 +283,15 @@ document.getElementById('custom-step-tools').addEventListener('change', (e) => {
 });
 
 // Installation Logic
-const CORE_INSTALL_STEPS = [
-  { id: 'homebrew', label: 'Initializing Homebrew Thrusters' },
-  { id: 'clis', label: 'Deploying CLI Payloads' },
-  { id: 'antigravity', label: 'Installing Antigravity Core' },
-  { id: 'path', label: 'Calibrating Shell Trajectories' },
-  { id: 'mcps', label: 'Docking MCP Servers' },
-  { id: 'remoat', label: 'Establishing OrbitPrompter Uplink' }
-];
+const TOOL_STEPS_META = {
+  git: { id: 'git', label: 'Installing Git' },
+  python: { id: 'python', label: 'Installing Python 3' },
+  node: { id: 'node', label: 'Installing Node.js' },
+  supabase: { id: 'supabase', label: 'Installing Supabase CLI' },
+  'eas-cli': { id: 'eas-cli', label: 'Installing EAS CLI' },
+  tmole: { id: 'tmole', label: 'Installing tmole (Tunnelmole)' },
+  orbitprompter: { id: 'orbitprompter', label: 'Installing OrbitPrompter CLI' }
+};
 
 const GEMINI_INSTALL_STEP = {
   id: 'scaffold-gemini',
@@ -306,28 +307,71 @@ const WORKFLOW_INSTALL_STEPS = [
   { id: 'scaffold-wf-project-creator', label: 'Writing project-creator.md', group: 'workflows' }
 ];
 
-const FULL_INSTALL_STEPS = [
-  ...CORE_INSTALL_STEPS,
-  GEMINI_INSTALL_STEP,
-  ...WORKFLOW_INSTALL_STEPS
-];
+function buildExpressInstallSteps() {
+  const steps = [];
+  if (window.electronEnv?.platform !== 'win32') {
+    steps.push({ id: 'homebrew', label: 'Initializing Homebrew' });
+  }
+  
+  steps.push(TOOL_STEPS_META.git);
+  steps.push(TOOL_STEPS_META.python);
+  steps.push(TOOL_STEPS_META.node);
+  if (window.electronEnv?.platform !== 'win32') {
+    steps.push(TOOL_STEPS_META.supabase);
+  }
+  steps.push(TOOL_STEPS_META['eas-cli']);
+  steps.push(TOOL_STEPS_META.tmole);
+  steps.push(TOOL_STEPS_META.orbitprompter);
 
-function appendScaffoldInstallSteps(steps, { gemini = true, workflows = true } = {}) {
-  const out = [...steps];
-  if (gemini) out.push(GEMINI_INSTALL_STEP);
-  if (workflows) out.push(...WORKFLOW_INSTALL_STEPS);
-  return out;
+  steps.push({ id: 'antigravity', label: 'Installing Antigravity Core' });
+  steps.push({ id: 'path', label: 'Calibrating Shell Trajectories' });
+  steps.push({ id: 'mcps', label: 'Docking MCP Servers' });
+  steps.push({ id: 'remoat', label: 'Establishing OrbitPrompter Uplink' });
+  steps.push(GEMINI_INSTALL_STEP);
+  steps.push(...WORKFLOW_INSTALL_STEPS);
+  return steps;
 }
 
-const TMOLE_INSTALL_STEP = { id: 'tmole', label: 'Installing tmole (Tunnelmole)' };
-
 function buildCustomInstallSteps() {
-  if (isWorkflowsOnlyPayload()) return [TMOLE_INSTALL_STEP, ...WORKFLOW_INSTALL_STEPS];
+  if (isWorkflowsOnlyPayload()) {
+    return [TOOL_STEPS_META.tmole, ...WORKFLOW_INSTALL_STEPS];
+  }
 
-  const wf = wantsWorkflows();
-  const gem = wantsGemini();
-  if (!wf && !gem) return [...CORE_INSTALL_STEPS];
-  return appendScaffoldInstallSteps(CORE_INSTALL_STEPS, { gemini: gem, workflows: wf });
+  const steps = [];
+  if (window.electronEnv?.platform !== 'win32') {
+    steps.push({ id: 'homebrew', label: 'Initializing Homebrew' });
+  }
+
+  const selectedTools = Array.from(document.querySelectorAll('.tool-checkbox:checked')).map((cb) => cb.value);
+  for (const t of selectedTools) {
+    if (TOOL_STEPS_META[t]) {
+      steps.push(TOOL_STEPS_META[t]);
+    }
+  }
+
+  if (document.getElementById('install-ag').checked) {
+    steps.push({ id: 'antigravity', label: 'Installing Antigravity Core' });
+  }
+  
+  steps.push({ id: 'path', label: 'Calibrating Shell Trajectories' });
+
+  if (document.getElementById('configure-mcps').checked) {
+    steps.push({ id: 'mcps', label: 'Docking MCP Servers' });
+  }
+
+  if (isRemoatToolSelected()) {
+    steps.push({ id: 'remoat', label: 'Establishing OrbitPrompter Uplink' });
+  }
+
+  if (wantsGemini()) {
+    steps.push(GEMINI_INSTALL_STEP);
+  }
+
+  if (wantsWorkflows()) {
+    steps.push(...WORKFLOW_INSTALL_STEPS);
+  }
+
+  return steps;
 }
 
 function setInstallProgressUI({ index, total, label, phase }) {
@@ -391,7 +435,6 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
   progressTitle.classList.remove('wiz-progress-title--fail', 'wiz-progress-title--done');
   btnFinish.style.display = 'none';
 
-  const selectedTools = Array.from(document.querySelectorAll('.tool-checkbox:checked')).map((cb) => cb.value);
   const installAg = document.getElementById('install-ag').checked;
   const remoatPayload = {
     telegramBotToken: document.getElementById('remoat-bot-token').value,
@@ -403,12 +446,15 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
   container.innerHTML = '';
   const panel = document.querySelector('.wiz-panel--progress');
   if (panel) {
-    panel.style.display = 'none'; // Hide the whole panel during installation for a super clean view
+    panel.style.display = 'flex'; // Keep the panel fully visible
     const listEl = panel.querySelector('.wiz-progress-list');
     if (listEl) {
-      listEl.style.display = 'flex'; // Restore in case it was hidden on a previous successful run
+      listEl.style.display = 'flex';
     }
   }
+
+  // Populate row elements in the wizard list
+  renderInstallStepRows(container, stepDefs);
 
   const total = stepDefs.length;
   const progressTrack = document.getElementById('progress-track');
@@ -420,29 +466,65 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
 
     setInstallProgressUI({ index: i, total, label: step.label, phase: 'run' });
 
+    // Mark active step in UI
+    const stepIcon = document.getElementById(`icon-${step.id}`);
+    const stepMsg = document.getElementById(`msg-${step.id}`);
+    const stepItem = stepIcon?.closest('.wiz-step-item');
+    if (stepIcon) {
+      stepIcon.className = 'wiz-step-icon running';
+      stepIcon.textContent = '';
+    }
+    if (stepMsg) {
+      stepMsg.textContent = 'Checking/Installing…';
+    }
+    if (stepItem) {
+      stepItem.classList.add('is-active');
+      stepItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     let data = null;
-    if (step.id === 'clis') data = selectedTools;
     if (step.id === 'antigravity') data = installAg;
     if (step.id === 'remoat') data = remoatPayload;
     if (step.id === 'mcps') data = document.getElementById('configure-mcps').checked;
 
     const result = await window.api.installStep(step.id, data);
 
+    if (stepItem) {
+      stepItem.classList.remove('is-active');
+    }
+
     if (result.status === 'success') {
+      if (stepIcon) {
+        stepIcon.className = 'wiz-step-icon success';
+        stepIcon.textContent = '✓';
+      }
+      if (stepMsg) {
+        stepMsg.textContent = result.message || 'Complete';
+      }
       setInstallProgressUI({ index: i + 1, total, label: step.label, phase: 'run' });
     } else {
-      if (panel) {
-        panel.style.display = 'flex';
+      if (stepIcon) {
+        stepIcon.className = 'wiz-step-icon error';
+        stepIcon.textContent = '✕';
       }
-      container.innerHTML = `
-        <div class="wiz-step-item" style="border: 1px solid rgba(248, 113, 113, 0.25); padding: 16px; border-radius: 10px; background: rgba(248, 113, 113, 0.05); text-align: left; width: 100%; box-sizing: border-box;">
-          <div style="font-weight: 600; color: #f87171; margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-            <span style="display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; background: rgba(248, 113, 113, 0.15); border-radius: 50%; color: #f87171; font-size: 10px; border: 1px solid rgba(248, 113, 113, 0.3);">✕</span>
-            Error installing: ${step.label}
-          </div>
-          <pre style="margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px; color: #fca5a5; line-height: 1.5; text-align: left; background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.04); overflow-x: auto;">${escapeHtml(result.message)}</pre>
+      if (stepMsg) {
+        stepMsg.textContent = 'Failed';
+      }
+
+      // Render a beautifully detailed failure card below the list items
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'wiz-step-item';
+      errorDiv.style.cssText = 'border: 1px solid rgba(248, 113, 113, 0.25); padding: 16px; border-radius: 10px; background: rgba(248, 113, 113, 0.05); text-align: left; width: 100%; box-sizing: border-box; margin-top: 12px;';
+      errorDiv.innerHTML = `
+        <div style="font-weight: 600; color: #f87171; margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; background: rgba(248, 113, 113, 0.15); border-radius: 50%; color: #f87171; font-size: 10px; border: 1px solid rgba(248, 113, 113, 0.3);">✕</span>
+          Error installing: ${step.label}
         </div>
+        <pre style="margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px; color: #fca5a5; line-height: 1.5; text-align: left; background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.04); overflow-x: auto;">${escapeHtml(result.message)}</pre>
       `;
+      container.appendChild(errorDiv);
+      errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
       btnFinish.style.display = 'inline-flex';
       progressTitle.innerText = failTitle;
       progressTitle.classList.remove('wiz-progress-title--done');
@@ -454,14 +536,6 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
   }
 
   progressTrack?.classList.remove('is-active');
-  if (panel) {
-    panel.style.display = 'flex';
-    // Remove the body structure but keep the footer centered
-    const listEl = panel.querySelector('.wiz-progress-list');
-    if (listEl) {
-      listEl.style.display = 'none';
-    }
-  }
   btnFinish.style.display = 'inline-flex';
   setInstallProgressUI({ index: total, total, label: doneTitle, phase: 'done' });
   progressTitle.innerText = doneTitle;
@@ -471,7 +545,7 @@ async function runInstallSteps(stepDefs, { runningTitle, doneTitle, failTitle })
 
 function startInstall() {
   const workflowsOnly = isWorkflowsOnlyPayload();
-  const stepDefs = viewForm.classList.contains('active') ? buildCustomInstallSteps() : FULL_INSTALL_STEPS;
+  const stepDefs = viewForm.classList.contains('active') ? buildCustomInstallSteps() : buildExpressInstallSteps();
   return runInstallSteps(stepDefs, {
     runningTitle: workflowsOnly
       ? 'Installing Autopilot workflows'
