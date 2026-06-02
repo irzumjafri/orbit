@@ -2,7 +2,7 @@
   <img src="electron/assets/orbit_icon.svg" width="128" height="128" alt="Orbit Logo">
 </p>
 
-# 🌌 Orbit
+# Orbit
 
 Orbit is a premium, Fluent-designed Electron desktop application crafted to streamline local environment setup for developers utilizing **Antigravity IDE**, **OrbitPrompter**, and modern mobile/web dev tooling. 
 
