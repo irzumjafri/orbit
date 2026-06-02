@@ -148,7 +148,7 @@ export async function openAntigravityWithCdp(platform = os.platform()) {
   if (!ready) {
     return {
       ok: false,
-      message: `${install.label} opened, but its remote debugging port is unresponsive. This usually happens if the IDE was already running.\n\nPlease completely QUIT all active windows of ${install.label} (Cmd + Q or quit via the menu) and click Ignite again to start instead.`
+      message: `${install.label} opened, but its remote debugging port is unresponsive. This usually happens if the IDE was already running.\n\nPlease completely QUIT all active windows of ${install.label} (Cmd + Q or quit via the menu) and click Ignite again to start.`
     };
   }
 
