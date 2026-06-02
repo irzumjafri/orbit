@@ -1,8 +1,12 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { $, fs, os } from 'zx';
+import { $, fs, os, usePowerShell } from 'zx';
 import { spawn } from 'child_process';
+
+if (os.platform() === 'win32') {
+  usePowerShell();
+}
 
 // Prepend standard developer bin paths to process.env.PATH on macOS and Linux.
 // This resolves the issue where GUI-launched Electron apps cannot locate git, node, supabase, etc.
