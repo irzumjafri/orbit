@@ -86,6 +86,18 @@ Orbit compiles and executes on macOS, Windows, and Linux. Make sure you have the
 
 ---
 
+## ⚠️ Troubleshooting macOS Installation
+
+If you receive a message stating **"Orbit is damaged and can't be opened"** or **"Orbit can't be opened because it is from an unidentified developer"** when running the packaged application on macOS, it is due to Apple's Gatekeeper blocking unsigned applications. 
+
+You can easily bypass this security verification by running the following command in your Terminal:
+
+```bash
+xattr -cr /Applications/Orbit.app
+```
+
+---
+
 ## 🚀 Automated Release Pipeline (CI/CD)
 
 Orbit is pre-configured with a robust multi-platform compiler utilizing **GitHub Actions** and `electron-builder`.
