@@ -3184,11 +3184,13 @@ body:has(#wiz-shell) .titlebar__title {
 .lp-mascot-img--idle {
   opacity: 1;
   transform: scale(1) translateY(0);
+  animation: idle-entrance 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .lp-mascot-img--ignited {
   opacity: 0;
   transform: scale(0.7) translateY(40px) rotate(-10deg);
+  animation: ignited-exit 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .lp-mascot-wrap.is-ignited {
@@ -3221,6 +3223,19 @@ body:has(#wiz-shell) .titlebar__title {
   }
 }
 
+@keyframes idle-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(-120px) rotate(-8deg);
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+    filter: blur(0);
+  }
+}
+
 @keyframes ignited-entrance {
   0% {
     opacity: 0;
@@ -3241,6 +3256,19 @@ body:has(#wiz-shell) .titlebar__title {
   100% {
     opacity: 1;
     transform: scale(1.05) translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes ignited-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0) rotate(0deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5, 1.4) translateY(220px) rotate(-10deg);
+    filter: blur(6px);
   }
 }
 
