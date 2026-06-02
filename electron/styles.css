@@ -277,6 +277,26 @@ h1.main-title {
   padding: 24px;
 }
 
+.view-boot__logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 12px rgba(71, 158, 245, 0.25));
+  animation: logo-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes logo-glow {
+  0% {
+    filter: drop-shadow(0 4px 8px rgba(71, 158, 245, 0.2));
+    transform: scale(0.98);
+  }
+  100% {
+    filter: drop-shadow(0 6px 18px rgba(71, 158, 245, 0.45));
+    transform: scale(1.02);
+  }
+}
+
 .view-boot__spinner {
   width: 40px;
   height: 40px;
@@ -2874,18 +2894,7 @@ body:has(#wiz-shell) .titlebar__title {
 .dash-nav-logo {
   width: 24px;
   height: 24px;
-  border: 1.5px solid var(--dash-accent);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dash-nav-logo-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--dash-accent);
-  border-radius: 50%;
+  object-fit: contain;
 }
 
 .dash-nav-title {
