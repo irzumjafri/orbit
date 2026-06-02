@@ -319,7 +319,7 @@ ipcMain.handle('install-step', async (event, step, data) => {
             if (isWindows) {
               const tempExe = path.join(os.tmpdir(), 'Antigravity-IDE-setup.exe');
               await $`curl -fsSL ${url} -o ${tempExe}`;
-              await $`${tempExe} /S`;
+              await $`& ${tempExe} /S`;
               return {
                 status: 'success',
                 message: `Antigravity IDE installed from ${ANTIGRAVITY_DOWNLOAD_PAGE} (${platformKey})`
