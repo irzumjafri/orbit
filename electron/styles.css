@@ -3189,7 +3189,6 @@ body:has(#wiz-shell) .titlebar__title {
 .lp-mascot-img--ignited {
   opacity: 0;
   transform: scale(0.7) translateY(40px) rotate(-10deg);
-  mix-blend-mode: screen;
 }
 
 .lp-mascot-wrap.is-ignited .lp-mascot-img--idle {
