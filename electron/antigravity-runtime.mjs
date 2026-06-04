@@ -117,7 +117,7 @@ export async function openAntigravityWithCdp(platform = os.platform(), workspace
     if (workspacePath) {
       try {
         if (platform === 'darwin') {
-          await execFileAsync('open', ['-a', install.macAppName, workspacePath]);
+          await execFileAsync(install.cliPath, [workspacePath]);
         } else if (platform === 'win32') {
           spawn(install.cliPath, [workspacePath], {
             detached: true,
@@ -141,11 +141,11 @@ export async function openAntigravityWithCdp(platform = os.platform(), workspace
 
   try {
     if (platform === 'darwin') {
-      const args = ['-n', '-a', install.macAppName, '--args', `--remote-debugging-port=${port}`];
+      const args = ['--new-window', `--remote-debugging-port=${port}`];
       if (workspacePath) {
         args.push(workspacePath);
       }
-      await execFileAsync('open', args);
+      await execFileAsync(install.cliPath, args);
     } else if (platform === 'win32') {
       const args = [`--remote-debugging-port=${port}`];
       if (workspacePath) {
