@@ -3404,8 +3404,21 @@ html[data-platform='darwin'] .dash-nav {
 }
 
 .dash-page--configure,
-.dash-page--instructions {
+.dash-page--instructions,
+.dash-page--autorunner {
   overflow: hidden;
+}
+
+.dash-page--autorunner .ar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.dash-page--autorunner .ar-status-line {
+  margin-top: 12px;
+  font-size: 0.9rem;
 }
 
 .diagnostics-mount {

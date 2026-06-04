@@ -91,7 +91,7 @@
                 <label class="wiz-check-item wiz-check-item--wide"><input type="checkbox" id="install-workflows" checked> Workflow files — <code>~/.agents/workflows/</code></label>
                 <label class="wiz-check-item wiz-check-item--wide"><input type="checkbox" id="install-gemini" checked> Global rules — <code>~/.gemini/GEMINI.md</code></label>
               </div>
-              <p class="dash-field-hint wiz-autopilot-hint">Workflows: feature.md, submit.md, test.md, project-creator.md. Uncheck all tools above for a workflows-only install.</p>
+              <p class="dash-field-hint wiz-autopilot-hint">Workflows: feature.md, submit.md, test.md, project-creator.md, auto-run.md. Uncheck all tools above for a workflows-only install.</p>
             </div>
             <div class="custom-step" id="custom-step-remoat-token">
               <p class="wiz-intro">From @BotFather: create a bot with <code>/newbot</code>, then paste the API token here.</p>
@@ -161,6 +161,7 @@
         </div>
         <nav class="dash-nav-tabs" role="tablist">
           <button type="button" class="dash-nav-tab active" id="btn-dock-mission" role="tab" aria-selected="true">Overview</button>
+          <button type="button" class="dash-nav-tab" id="btn-dock-autorunner" role="tab" aria-selected="false" hidden>Auto runner</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-diagnostics" role="tab" aria-selected="false">Diagnostics</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-remoat" role="tab" aria-selected="false">Configure</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-autopilot" role="tab" aria-selected="false">Instructions</button>
@@ -246,6 +247,40 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div id="dash-stage-panel-autorunner" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-autorunner" hidden>
+          <div class="dash-page dash-page--autorunner">
+            <section class="dash-surface">
+              <p class="dash-section-title">Auto runner</p>
+              <p class="dash-field-hint" id="ar-ignite-hint">Ignite on Overview to enable Auto runner.</p>
+              <div class="dash-field ar-field-row">
+                <label class="wiz-check-item">
+                  <input type="checkbox" id="ar-enabled"> Enable scheduled auto-run
+                </label>
+                <p class="dash-field-hint">Checks every 5 minutes while Orbit is open and ignited.</p>
+              </div>
+              <div class="dash-field">
+                <label class="dash-field-label" for="ar-lead-hours">Lead time before reset (hours)</label>
+                <input type="number" class="dash-field-input" id="ar-lead-hours" min="0.25" max="24" step="0.25" value="1">
+              </div>
+              <div class="dash-field">
+                <label class="dash-field-label" for="ar-timeout-min">Run window (minutes)</label>
+                <input type="number" class="dash-field-input" id="ar-timeout-min" min="5" max="480" step="5" value="120">
+                <p class="dash-field-hint">Telegram completion is sent after this window (agent may still be working).</p>
+              </div>
+              <div class="dash-field">
+                <label class="dash-field-label" for="ar-model-select">Model for Run now</label>
+                <select id="ar-model-select" class="dash-field-input dash-doc-select"></select>
+              </div>
+              <div class="ar-actions">
+                <button type="button" class="dash-btn-save" id="btn-ar-run-now">Run now</button>
+                <button type="button" class="dash-btn-secondary" id="btn-ar-save">Save settings</button>
+              </div>
+              <p class="dash-field-hint ar-status-line" id="ar-status-line">—</p>
+              <p class="dash-field-hint" id="ar-telegram-hint"></p>
+            </section>
           </div>
         </div>
 

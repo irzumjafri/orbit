@@ -45,8 +45,15 @@ import {
   buildFeatureMd,
   buildSubmitMd,
   buildTestMd,
-  buildProjectCreatorMd
+  buildProjectCreatorMd,
+  buildAutoRunMd
 } from '../lib/scaffold-templates.mjs';
+import { fetchAntigravityQuotas } from '../lib/antigravity-quota.mjs';
+import {
+  AutoRunnerController,
+  normalizeAutoRunnerConfig,
+  DEFAULT_AUTO_RUNNER_CONFIG
+} from '../lib/auto-runner.mjs';
 import { writeUserScaffoldFile } from '../lib/scaffold-io.mjs';
 import { ensureOrbitPrompterConfigDir, orbitPrompterPaths } from '../lib/orbitprompter-paths.mjs';
 import {
@@ -65,6 +72,7 @@ import {
 import {
   resolveAntigravityInstall,
   openAntigravityWithCdp,
+  findRespondingCdpPort,
   isOrbitPrompterBotRunning,
   stopOrbitPrompterBot,
   spawnOrbitPrompterStart
@@ -110,6 +118,7 @@ async function writeWorkflowScaffoldFiles(hint) {
     path.join(workflowsDir, 'project-creator.md'),
     buildProjectCreatorMd({ workspaceHintLine: hint })
   );
+  await writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'auto-run.md'), buildAutoRunMd());
 }
 
 async function writeGeminiScaffoldFile(hint) {
@@ -134,7 +143,9 @@ async function runScaffoldInstallStep(stepId) {
           homeDir,
           path.join(workflowsDir, 'project-creator.md'),
           buildProjectCreatorMd({ workspaceHintLine: hint })
-        )
+        ),
+      'scaffold-wf-auto-run': () =>
+        writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'auto-run.md'), buildAutoRunMd())
     };
     await writers[stepId]();
     return { status: 'success', message: meta.successMessage };
@@ -164,7 +175,12 @@ function validateAllowedUserIds(ids) {
   return null;
 }
 
-function mergeWriteOrbitPrompterConfig({ telegramBotToken, allowedUserIds, workspaceBaseDir }) {
+function mergeWriteOrbitPrompterConfig({
+  telegramBotToken,
+  allowedUserIds,
+  workspaceBaseDir,
+  autoRunner
+}) {
   ensureOrbitPrompterConfigDir(homeDir);
   const { configJson } = orbitPrompterPaths(homeDir);
   const existing = readOrbitPrompterConfigJson();
@@ -173,11 +189,58 @@ function mergeWriteOrbitPrompterConfig({ telegramBotToken, allowedUserIds, works
     : expandWorkspaceBaseDir(homeDir, existing.workspaceBaseDir ?? '');
   const out = {
     ...existing,
-    telegramBotToken: String(telegramBotToken ?? '').trim(),
-    allowedUserIds,
+    telegramBotToken: String(telegramBotToken ?? existing.telegramBotToken ?? '').trim(),
+    allowedUserIds: allowedUserIds ?? existing.allowedUserIds,
     workspaceBaseDir: ws
   };
+  if (autoRunner !== undefined) {
+    out.autoRunner = normalizeAutoRunnerConfig({ ...existing.autoRunner, ...autoRunner });
+  } else if (existing.autoRunner) {
+    out.autoRunner = normalizeAutoRunnerConfig(existing.autoRunner);
+  }
   fs.writeFileSync(configJson, `${JSON.stringify(out, null, 2)}\n`);
+}
+
+function readAutoRunnerConfigFromDisk() {
+  const j = readOrbitPrompterConfigJson();
+  return normalizeAutoRunnerConfig(j.autoRunner ?? DEFAULT_AUTO_RUNNER_CONFIG);
+}
+
+function readTelegramConfigForNotify() {
+  const j = readOrbitPrompterConfigJson();
+  const { legacyTokenFile } = orbitPrompterPaths(homeDir);
+  let telegramBotToken = String(j.telegramBotToken ?? '').trim();
+  if (!telegramBotToken && fs.existsSync(legacyTokenFile)) {
+    const content = fs.readFileSync(legacyTokenFile, 'utf8');
+    telegramBotToken = content.replace(/^TOKEN=/, '').trim();
+  }
+  const allowedUserIds = Array.isArray(j.allowedUserIds)
+    ? j.allowedUserIds.map(String)
+    : [];
+  return { telegramBotToken, allowedUserIds };
+}
+
+let autoRunnerController = null;
+
+function getAutoRunnerController() {
+  if (!autoRunnerController) {
+    autoRunnerController = new AutoRunnerController({
+      homeDir,
+      isIgnited: async () => {
+        const port = await findRespondingCdpPort();
+        return !!port;
+      },
+      findCdpPort: findRespondingCdpPort,
+      readTelegramConfig: readTelegramConfigForNotify,
+      readAutoRunnerConfig: readAutoRunnerConfigFromDisk,
+      ensureAutoRunWorkflow: async () => {
+        const p = path.join(homeDir, '.agents', 'workflows', 'auto-run.md');
+        if (fs.existsSync(p)) return;
+        await writeUserScaffoldFile(homeDir, p, buildAutoRunMd());
+      }
+    });
+  }
+  return autoRunnerController;
 }
 
 // Manually load .env file from the parent directory
@@ -227,6 +290,14 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  const ar = getAutoRunnerController();
+  if (readAutoRunnerConfigFromDisk().enabled) {
+    ar.startPolling();
+  }
+
+  app.on('before-quit', () => {
+    ar.stopPolling();
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -322,6 +393,8 @@ async function isComponentInstalled(step, data) {
         return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'test.md'));
       case 'scaffold-wf-project-creator':
         return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'project-creator.md'));
+      case 'scaffold-wf-auto-run':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'auto-run.md'));
     }
   } catch {
     return false;
@@ -571,7 +644,8 @@ ipcMain.handle('install-step', async (event, step, data) => {
         await writeWorkflowScaffoldFiles(hint);
         return {
           status: 'success',
-          message: 'Wrote feature.md, submit.md, test.md, project-creator.md to ~/.agents/workflows/'
+          message:
+            'Wrote feature.md, submit.md, test.md, project-creator.md, auto-run.md to ~/.agents/workflows/'
         };
       }
       case 'scaffold-gemini':
@@ -579,6 +653,7 @@ ipcMain.handle('install-step', async (event, step, data) => {
       case 'scaffold-wf-submit':
       case 'scaffold-wf-test':
       case 'scaffold-wf-project-creator':
+      case 'scaffold-wf-auto-run':
         return runScaffoldInstallStep(step);
       case 'scaffold': {
         const hint = workspaceHintForScaffold();
@@ -655,6 +730,7 @@ ipcMain.handle('dash-docs-status', () => {
     submit: catalog.builtins.find((b) => b.id === 'submit')?.exists ?? false,
     test: catalog.builtins.find((b) => b.id === 'test')?.exists ?? false,
     projectCreator: catalog.builtins.find((b) => b.id === 'projectCreator')?.exists ?? false,
+    autoRun: catalog.builtins.find((b) => b.id === 'autoRun')?.exists ?? false,
     customWorkflowCount: catalog.custom.length
   };
 });
@@ -671,139 +747,68 @@ ipcMain.handle('dash-brand-icons', () => ({
   markdown: simpleIconSvg(siMarkdown)
 }));
 
-ipcMain.handle('dash-model-quota', async () => {
+ipcMain.handle('dash-model-quota', () => fetchAntigravityQuotas());
+
+ipcMain.handle('dash-auto-runner-get', async () => {
   try {
-    let stdout = '';
-    if (os.platform() === 'darwin' || os.platform() === 'linux') {
-      const res = await $`pgrep -fl language_server`.catch(() => ({ stdout: '' }));
-      stdout = res.stdout;
-    } else if (os.platform() === 'win32') {
-      const res = await $`wmic process where "name='language_server.exe' or name='language_server_windows_amd64.exe'" get commandline,processid`.catch(() => ({ stdout: '' }));
-      stdout = res.stdout;
+    return { ok: true, ...(await getAutoRunnerController().getSnapshot()) };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('dash-auto-runner-save', async (_event, payload) => {
+  try {
+    const existing = readOrbitPrompterConfigJson();
+    const merged = normalizeAutoRunnerConfig({
+      ...existing.autoRunner,
+      ...(payload && typeof payload === 'object' ? payload : {})
+    });
+    mergeWriteOrbitPrompterConfig({
+      telegramBotToken: existing.telegramBotToken,
+      allowedUserIds: existing.allowedUserIds,
+      workspaceBaseDir: existing.workspaceBaseDir,
+      autoRunner: merged
+    });
+    return { ok: true, config: merged };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('dash-auto-runner-set-enabled', async (_event, enabled) => {
+  try {
+    const existing = readOrbitPrompterConfigJson();
+    const merged = normalizeAutoRunnerConfig({
+      ...existing.autoRunner,
+      enabled: !!enabled
+    });
+    mergeWriteOrbitPrompterConfig({
+      telegramBotToken: existing.telegramBotToken,
+      allowedUserIds: existing.allowedUserIds,
+      workspaceBaseDir: existing.workspaceBaseDir,
+      autoRunner: merged
+    });
+    const ar = getAutoRunnerController();
+    ar.setScheduledEnabled(merged.enabled);
+    return { ok: true, config: merged, ...(await ar.getSnapshot()) };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('dash-auto-runner-run-now', async (_event, payload) => {
+  try {
+    const ignited = !!(await findRespondingCdpPort());
+    if (!ignited) {
+      return { ok: false, message: 'Ignite on Overview first (CDP required).' };
     }
-
-    let pid = null;
-    let csrfToken = null;
-    const lines = stdout.split('\n');
-    for (const line of lines) {
-      if (line.includes('--csrf_token')) {
-        if (os.platform() === 'win32') {
-          const tokenMatch = line.match(/--csrf_token[=\s]+([a-zA-Z0-9\-]+)/);
-          const pidMatch = line.match(/(\d+)\s*$/);
-          if (tokenMatch && tokenMatch[1] && pidMatch) {
-            pid = parseInt(pidMatch[1], 10);
-            csrfToken = tokenMatch[1];
-            break;
-          }
-        } else {
-          const parts = line.trim().split(/\s+/);
-          const parsedPid = parseInt(parts[0], 10);
-          const cmd = line.substring(parts[0].length).trim();
-          const tokenMatch = cmd.match(/--csrf_token[=\s]+([a-zA-Z0-9\-]+)/);
-          if (parsedPid && tokenMatch && tokenMatch[1]) {
-            if (line.includes('extensions/antigravity') || !pid) {
-              pid = parsedPid;
-              csrfToken = tokenMatch[1];
-            }
-          }
-        }
-      }
-    }
-
-    if (!pid || !csrfToken) {
-      return { ok: false, message: 'Antigravity language server not running' };
-    }
-
-    let ports = [];
-    if (os.platform() === 'darwin' || os.platform() === 'linux') {
-      const { stdout: lsofOut } = await $`lsof -nP -a -iTCP -sTCP:LISTEN -p ${pid}`.catch(() => ({ stdout: '' }));
-      const regex = new RegExp(`^\\S+\\s+${pid}\\s+.*?(?:TCP|UDP)\\s+(?:\\*|[\\d.]+|\\[[\\da-f:]+\\]):(\\d+)\\s+\\(LISTEN\\)`, 'gim');
-      let match;
-      while ((match = regex.exec(lsofOut)) !== null) {
-        const port = parseInt(match[1], 10);
-        if (!ports.includes(port)) {
-          ports.push(port);
-        }
-      }
-    } else if (os.platform() === 'win32') {
-      const { stdout: netstatOut } = await $`netstat -ano`.catch(() => ({ stdout: '' }));
-      const lines = netstatOut.split('\n');
-      for (const line of lines) {
-        if (line.includes('LISTENING') && line.includes(String(pid))) {
-          const parts = line.trim().split(/\s+/);
-          const addr = parts[1];
-          const portMatch = addr.match(/:(\d+)$/);
-          if (portMatch) {
-            const port = parseInt(portMatch[1], 10);
-            if (!ports.includes(port)) ports.push(port);
-          }
-        }
-      }
-    }
-
-    if (ports.length === 0) {
-      return { ok: false, message: 'No listening ports found for language server' };
-    }
-
-    const https = await import('https');
-    for (const port of ports) {
-      try {
-        const data = await new Promise((resolve, reject) => {
-          const payload = JSON.stringify({
-            metadata: { ideName: 'antigravity', extensionName: 'antigravity', locale: 'en' }
-          });
-          const options = {
-            hostname: '127.0.0.1',
-            port: port,
-            path: '/exa.language_server_pb.LanguageServerService/GetUserStatus',
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(payload),
-              'Connect-Protocol-Version': '1',
-              'X-Codeium-Csrf-Token': csrfToken,
-            },
-            rejectUnauthorized: false,
-            timeout: 1000,
-          };
-          const req = https.request(options, res => {
-            let body = '';
-            res.on('data', chunk => body += chunk);
-            res.on('end', () => {
-              if (res.statusCode !== 200) reject(new Error(`HTTP ${res.statusCode}`));
-              else resolve(body);
-            });
-          });
-          req.on('error', reject);
-          req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-          req.write(payload);
-          req.end();
-        });
-
-        const parsed = JSON.parse(data);
-        const configs = parsed?.userStatus?.cascadeModelConfigData?.clientModelConfigs || [];
-        
-        const models = configs.map(c => {
-          const label = c.label || c.displayName || c.modelName || '';
-          const modelId = c.modelOrAlias?.model || '';
-          const qi = c.quotaInfo || {};
-          const remainingFraction = parseFloat(qi.remainingFraction ?? qi.remaining ?? 1);
-          return {
-            label,
-            modelId,
-            percentage: Math.round(remainingFraction * 100),
-            resetTime: qi.resetTime || ''
-          };
-        });
-
-        return { ok: true, models };
-      } catch (err) {
-        // Try next port
-      }
-    }
-    return { ok: false, message: 'Failed to query language server' };
-  } catch (err) {
-    return { ok: false, message: err.message };
+    const res = await getAutoRunnerController().runNow({
+      modelChoice: payload?.modelChoice ?? 'auto'
+    });
+    return { ...res, ...(await getAutoRunnerController().getSnapshot()) };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
   }
 });
 
@@ -890,7 +895,8 @@ ipcMain.handle('dash-remoat-config', async (event, action, payload) => {
     }
     const allowedUserIds = Array.isArray(j.allowedUserIds) ? j.allowedUserIds.join(', ') : '';
     const workspaceBaseDir = String(j.workspaceBaseDir ?? '');
-    return { telegramBotToken, allowedUserIds, workspaceBaseDir };
+    const autoRunner = readAutoRunnerConfigFromDisk();
+    return { telegramBotToken, allowedUserIds, workspaceBaseDir, autoRunner };
   }
   if (action === 'save' && payload && typeof payload === 'object') {
     const allowedUserIds = parseAllowedUserIdsFromCsv(payload.allowedUserIds);
