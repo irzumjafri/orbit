@@ -102,7 +102,7 @@ export async function waitForCdp(port, timeoutMs = 45000) {
 }
 
 /** Open Antigravity IDE with CDP (not legacy Antigravity.app via remoat open). */
-export async function openAntigravityWithCdp(platform = os.platform()) {
+export async function openAntigravityWithCdp(platform = os.platform(), workspacePath = process.cwd()) {
   const install = resolveAntigravityInstall(platform);
   if (!install) {
     return {
@@ -127,9 +127,17 @@ export async function openAntigravityWithCdp(platform = os.platform()) {
 
   try {
     if (platform === 'darwin') {
-      await execFileAsync('open', ['-n', '-a', install.macAppName, '--args', `--remote-debugging-port=${port}`]);
+      const args = ['-n', '-a', install.macAppName, '--args', `--remote-debugging-port=${port}`];
+      if (workspacePath) {
+        args.push(workspacePath);
+      }
+      await execFileAsync('open', args);
     } else if (platform === 'win32') {
-      spawn(install.cliPath, [`--remote-debugging-port=${port}`], {
+      const args = [`--remote-debugging-port=${port}`];
+      if (workspacePath) {
+        args.push(workspacePath);
+      }
+      spawn(install.cliPath, args, {
         detached: true,
         stdio: 'ignore'
       }).unref();
