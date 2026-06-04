@@ -186,7 +186,7 @@ function refreshCustomSubtitle() {
   if (intro) {
     if (isWorkflowsOnlyPayload()) {
       intro.textContent =
-        'Only Autopilot workflow files will be installed. Continue to write feature.md, submit.md, test.md, and project-creator.md under ~/.agents/workflows/.';
+        'Only Autopilot workflow files will be installed. Continue to write feature.md, submit.md, test.md, project-creator.md, and auto-run.md under ~/.agents/workflows/.';
     } else if (isRemoatToolSelected()) {
       intro.textContent =
         'Choose what to install. With OrbitPrompter CLI selected, you will set the bot token (step 3) then access and workspace (step 4).';
@@ -304,7 +304,8 @@ const WORKFLOW_INSTALL_STEPS = [
   { id: 'scaffold-wf-feature', label: 'Writing feature.md', group: 'workflows', groupLabel: '~/.agents/workflows/' },
   { id: 'scaffold-wf-submit', label: 'Writing submit.md', group: 'workflows' },
   { id: 'scaffold-wf-test', label: 'Writing test.md', group: 'workflows' },
-  { id: 'scaffold-wf-project-creator', label: 'Writing project-creator.md', group: 'workflows' }
+  { id: 'scaffold-wf-project-creator', label: 'Writing project-creator.md', group: 'workflows' },
+  { id: 'scaffold-wf-auto-run', label: 'Writing auto-run.md', group: 'workflows' }
 ];
 
 function buildExpressInstallSteps() {
@@ -611,7 +612,8 @@ const DOC_META = {
   feature: { title: 'feature.md', hint: '~/.agents/workflows/' },
   submit: { title: 'submit.md', hint: '~/.agents/workflows/' },
   test: { title: 'test.md', hint: '/test — tmole web or APK' },
-  projectCreator: { title: 'project-creator.md', hint: 'ProjectFactory — new repos & clones' }
+  projectCreator: { title: 'project-creator.md', hint: 'ProjectFactory — new repos & clones' },
+  autoRun: { title: 'auto-run.md', hint: '/auto-run — Orbit scheduled agent' }
 };
 
 let workflowCatalog = null;
@@ -796,7 +798,7 @@ function computeDiagnosticsSummary(status, install, docs) {
   const toolOk = Object.values(status).filter(Boolean).length;
   const toolTotal = Object.keys(status).length;
   const mcpOk = install.mcpAny ? 1 : 0;
-  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator'];
+  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
   const docOk = docKeys.reduce((n, k) => n + (docs[k] ? 1 : 0), 0);
   const ok = toolOk + mcpOk + docOk;
   const total = toolTotal + 1 + docKeys.length;
@@ -823,7 +825,7 @@ async function renderOverview(status, install, docs) {
   const fillEl = document.getElementById('overview-diag-fill');
   if (!list) return;
 
-  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator'];
+  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
   const missingDocs = docKeys.filter((k) => !docs[k]);
   const remoatReady = !!(status.remoat && install.remoatConfig);
   const remoatWarn = !!(status.remoat && !install.remoatConfig);
@@ -943,6 +945,71 @@ async function renderOverview(status, install, docs) {
 
 let dashboardListenersBound = false;
 
+function syncAutoRunnerTabVisible(ignited) {
+  const tab = document.getElementById('btn-dock-autorunner');
+  const hint = document.getElementById('ar-ignite-hint');
+  if (tab) tab.hidden = !ignited;
+  if (hint) hint.hidden = !!ignited;
+}
+
+function populateAutoRunnerModelSelect(quota) {
+  const sel = document.getElementById('ar-model-select');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="auto">Auto (highest quota)</option>';
+  if (quota?.ok && quota.models) {
+    for (const m of quota.models) {
+      if (!m.modelId) continue;
+      const opt = document.createElement('option');
+      opt.value = m.modelId;
+      opt.textContent = `${m.label || m.modelId} (${m.percentage}%)`;
+      sel.appendChild(opt);
+    }
+  }
+  if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+}
+
+async function refreshAutoRunnerPanel() {
+  const snap = await window.api.invoke('dash-auto-runner-get').catch(() => ({ ok: false }));
+  if (!snap?.ok) return;
+
+  syncAutoRunnerTabVisible(!!snap.ignited);
+
+  const enabledEl = document.getElementById('ar-enabled');
+  const leadEl = document.getElementById('ar-lead-hours');
+  const timeoutEl = document.getElementById('ar-timeout-min');
+  const statusEl = document.getElementById('ar-status-line');
+  const tgHint = document.getElementById('ar-telegram-hint');
+  const runBtn = document.getElementById('btn-ar-run-now');
+
+  if (enabledEl) enabledEl.checked = !!snap.config?.enabled;
+  if (leadEl) leadEl.value = String(snap.config?.leadTimeBeforeResetHours ?? 1);
+  if (timeoutEl) timeoutEl.value = String(snap.config?.runTimeoutMinutes ?? 120);
+
+  populateAutoRunnerModelSelect(snap.quota);
+
+  const inFlight = !!snap.state?.inFlight;
+  if (runBtn) runBtn.disabled = inFlight || !snap.ignited;
+
+  let line = snap.status?.line || 'Idle';
+  if (snap.state?.nextScheduledHint?.at) {
+    const d = new Date(snap.state.nextScheduledHint.at);
+    const diff = d - new Date();
+    if (diff > 0) {
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      line += ` · next ~${h}h ${m}m`;
+    }
+  }
+  if (statusEl) statusEl.textContent = line;
+
+  if (tgHint) {
+    tgHint.textContent = snap.telegramConfigured
+      ? ''
+      : 'Configure Telegram under Configure for notifications.';
+  }
+}
+
 function syncRemoatUi(running, canLaunch) {
   const btn = document.getElementById('btn-dash-launch');
   const titleEl = document.getElementById('dash-launch-title');
@@ -979,10 +1046,12 @@ function syncRemoatUi(running, canLaunch) {
       ? 'Open Antigravity IDE with debugging, then start the OrbitPrompter bot'
       : 'Install Antigravity IDE, the orbitprompter CLI, and save settings under Configure.';
   }
+
+  void refreshAutoRunnerPanel();
 }
 
 async function initDashboard() {
-  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot'];
+  const STAGE_IDS = ['mission', 'autorunner', 'diagnostics', 'remoat', 'autopilot'];
 
   const setStageTab = (tab) => {
     STAGE_IDS.forEach((id) => {
@@ -1039,7 +1108,7 @@ async function initDashboard() {
       glyphFromBrand(brandIcons, 'mcp', 'MC')
     );
 
-    const docKeysList = ['gemini', 'feature', 'submit', 'test', 'projectCreator'];
+    const docKeysList = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
     const docTiles = docKeysList
       .map((k) => {
         const meta = DOC_META[k];
@@ -1112,6 +1181,11 @@ async function initDashboard() {
     syncRemoatUi(running, canLaunch);
   };
 
+  const showDashAutoRunner = async () => {
+    setStageTab('autorunner');
+    await refreshAutoRunnerPanel();
+  };
+
   const showDashAutopilot = async () => {
     setStageTab('autopilot');
     setWorkflowCreatePanelVisible(false);
@@ -1144,6 +1218,7 @@ async function initDashboard() {
       return;
     }
     await refreshDashHome();
+    void refreshAutoRunnerPanel();
   };
 
   if (!dashboardListenersBound) {
@@ -1161,6 +1236,9 @@ async function initDashboard() {
     document.getElementById('btn-dock-mission')?.addEventListener('click', () => {
       void showDashHome();
     });
+    document.getElementById('btn-dock-autorunner')?.addEventListener('click', () => {
+      void showDashAutoRunner();
+    });
     document.getElementById('btn-dock-diagnostics')?.addEventListener('click', openDiag);
     document.getElementById('btn-dock-remoat')?.addEventListener('click', () => {
       void showDashRemoat();
@@ -1171,6 +1249,33 @@ async function initDashboard() {
     document.getElementById('btn-dash-launch').addEventListener('click', () => {
       void dashLaunchOrLand();
     });
+    document.getElementById('ar-enabled')?.addEventListener('change', async (e) => {
+      const res = await window.api.invoke('dash-auto-runner-set-enabled', e.target.checked);
+      if (!res?.ok && res?.message) window.alert(res.message);
+      await refreshAutoRunnerPanel();
+    });
+
+    document.getElementById('btn-ar-save')?.addEventListener('click', async () => {
+      const res = await window.api.invoke('dash-auto-runner-save', {
+        leadTimeBeforeResetHours: parseFloat(document.getElementById('ar-lead-hours')?.value || '1'),
+        runTimeoutMinutes: parseInt(document.getElementById('ar-timeout-min')?.value || '120', 10)
+      });
+      if (!res?.ok) window.alert(res?.message || 'Save failed');
+      else await refreshAutoRunnerPanel();
+    });
+
+    document.getElementById('btn-ar-run-now')?.addEventListener('click', async () => {
+      const modelChoice = document.getElementById('ar-model-select')?.value || 'auto';
+      const res = await window.api.invoke('dash-auto-runner-run-now', { modelChoice });
+      if (!res?.ok) window.alert(res?.message || 'Run failed');
+      await refreshAutoRunnerPanel();
+      const arInterval = setInterval(async () => {
+        const snap = await window.api.invoke('dash-auto-runner-get');
+        await refreshAutoRunnerPanel();
+        if (!snap?.state?.inFlight) clearInterval(arInterval);
+      }, 10000);
+    });
+
     document.getElementById('btn-save-remoat').addEventListener('click', async () => {
       const res = await window.api.invoke('dash-remoat-config', 'save', {
         telegramBotToken: document.getElementById('dash-remoat-token').value,
@@ -1269,4 +1374,7 @@ async function initDashboard() {
   await refreshWorkflowUi('gemini');
   const workflowSelectInit = document.getElementById('workflow-select');
   if (workflowSelectInit) workflowSelectInit.dataset.lastId = workflowSelectInit.value;
+
+  syncAutoRunnerTabVisible(false);
+  void refreshAutoRunnerPanel();
 }

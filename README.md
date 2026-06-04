@@ -20,9 +20,16 @@ Designed for high-performance pair-programming workflows, Orbit scaffolds config
   - One-click launch trigger to automatically initialize Antigravity IDE with Chrome DevTools Protocol (CDP) connectivity.
 - **🤖 Autopilot Workspace Scaffolding**:
   - Automatically initializes conventional workspace scaffolding inside custom folders.
-  - Pre-provisions agent guidelines (`~/.gemini/GEMINI.md`) and pre-built operational workflows (e.g., `feature.md`, `submit.md`, `test.md`).
+  - Pre-provisions agent guidelines (`~/.gemini/GEMINI.md`) and pre-built operational workflows (e.g., `feature.md`, `submit.md`, `test.md`, `auto-run.md`).
 - **🎛️ Integrated Bot Orchestrator**:
   - In-app GUI to configure, start, stop, and audit the **OrbitPrompter** bot (`remoat`) with customized access lists.
+- **⚡ Auto runner** (after **Ignite** on Overview):
+  - Schedules `/auto-run` prompts ~1 hour before each model’s quota reset (checks every 5 minutes while Orbit is open).
+  - **Run now** with model dropdown (Auto or a specific model).
+  - Telegram start and completion messages (quota remaining and next reset).
+  - Installs `auto-run.md` with Express/Custom Autopilot workflow setup.
+  - Requires **orbitprompter ≥ 1.0.3** with `orbitprompter prompt` (headless CDP submit).
+  - Scheduled runs need Orbit to stay open; system tray / background mode is planned for a future release.
 - **💎 Premium Fluent UI**:
   - Deep dark theme with glassmorphic elements, subtle glow animations, and Fluent 2 card designs.
 
