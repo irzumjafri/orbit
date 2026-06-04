@@ -114,6 +114,20 @@ export async function openAntigravityWithCdp(platform = os.platform(), workspace
 
   const existing = await findRespondingCdpPort();
   if (existing) {
+    if (workspacePath) {
+      try {
+        if (platform === 'darwin') {
+          await execFileAsync('open', ['-a', install.macAppName, workspacePath]);
+        } else if (platform === 'win32') {
+          spawn(install.cliPath, [workspacePath], {
+            detached: true,
+            stdio: 'ignore'
+          }).unref();
+        }
+      } catch (e) {
+        console.error('Failed to open workspace in existing instance:', e);
+      }
+    }
     return { ok: true, port: existing, install, alreadyOpen: true };
   }
 
