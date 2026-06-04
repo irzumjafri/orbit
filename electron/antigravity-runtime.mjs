@@ -127,7 +127,7 @@ export async function openAntigravityWithCdp(platform = os.platform()) {
 
   try {
     if (platform === 'darwin') {
-      await execFileAsync('open', ['-a', install.macAppName, '--args', `--remote-debugging-port=${port}`]);
+      await execFileAsync('open', ['-n', '-a', install.macAppName, '--args', `--remote-debugging-port=${port}`]);
     } else if (platform === 'win32') {
       spawn(install.cliPath, [`--remote-debugging-port=${port}`], {
         detached: true,
