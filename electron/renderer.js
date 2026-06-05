@@ -945,11 +945,13 @@ async function renderOverview(status, install, docs) {
 
 let dashboardListenersBound = false;
 
-function syncAutoRunnerTabVisible(ignited) {
-  const tab = document.getElementById('btn-dock-autorunner');
-  const hint = document.getElementById('ar-ignite-hint');
-  if (tab) tab.hidden = !ignited;
-  if (hint) hint.hidden = !!ignited;
+function syncAutoRunnerTabVisible() {
+  const container = document.getElementById('overview-autopilot-container');
+  if (container) {
+    const controlCenter = document.querySelector('.control-center');
+    const actuallyIgnited = controlCenter ? controlCenter.classList.contains('is-ignited') : false;
+    container.style.display = actuallyIgnited ? 'flex' : 'none';
+  }
 }
 
 function populateAutoRunnerModelSelect(quota) {
@@ -1051,7 +1053,7 @@ function syncRemoatUi(running, canLaunch) {
 }
 
 async function initDashboard() {
-  const STAGE_IDS = ['mission', 'autorunner', 'diagnostics', 'remoat', 'autopilot'];
+  const STAGE_IDS = ['mission', 'diagnostics', 'remoat', 'autopilot'];
 
   const setStageTab = (tab) => {
     STAGE_IDS.forEach((id) => {
@@ -1181,11 +1183,6 @@ async function initDashboard() {
     syncRemoatUi(running, canLaunch);
   };
 
-  const showDashAutoRunner = async () => {
-    setStageTab('autorunner');
-    await refreshAutoRunnerPanel();
-  };
-
   const showDashAutopilot = async () => {
     setStageTab('autopilot');
     setWorkflowCreatePanelVisible(false);
@@ -1236,9 +1233,6 @@ async function initDashboard() {
     document.getElementById('btn-dock-mission')?.addEventListener('click', () => {
       void showDashHome();
     });
-    document.getElementById('btn-dock-autorunner')?.addEventListener('click', () => {
-      void showDashAutoRunner();
-    });
     document.getElementById('btn-dock-diagnostics')?.addEventListener('click', openDiag);
     document.getElementById('btn-dock-remoat')?.addEventListener('click', () => {
       void showDashRemoat();
@@ -1255,15 +1249,6 @@ async function initDashboard() {
       await refreshAutoRunnerPanel();
     });
 
-    document.getElementById('btn-ar-save')?.addEventListener('click', async () => {
-      const res = await window.api.invoke('dash-auto-runner-save', {
-        leadTimeBeforeResetHours: parseFloat(document.getElementById('ar-lead-hours')?.value || '1'),
-        runTimeoutMinutes: parseInt(document.getElementById('ar-timeout-min')?.value || '120', 10)
-      });
-      if (!res?.ok) window.alert(res?.message || 'Save failed');
-      else await refreshAutoRunnerPanel();
-    });
-
     document.getElementById('btn-ar-run-now')?.addEventListener('click', async () => {
       const modelChoice = document.getElementById('ar-model-select')?.value || 'auto';
       const res = await window.api.invoke('dash-auto-runner-run-now', { modelChoice });
@@ -1278,12 +1263,25 @@ async function initDashboard() {
 
     document.getElementById('btn-save-remoat').addEventListener('click', async () => {
       const res = await window.api.invoke('dash-remoat-config', 'save', {
-        telegramBotToken: document.getElementById('dash-remoat-token').value,
-        allowedUserIds: document.getElementById('dash-remoat-user-ids').value,
-        workspaceBaseDir: document.getElementById('dash-remoat-workspace').value
+         telegramBotToken: document.getElementById('dash-remoat-token').value,
+         allowedUserIds: document.getElementById('dash-remoat-user-ids').value,
+         workspaceBaseDir: document.getElementById('dash-remoat-workspace').value
       });
-      if (res && res.ok === false && res.message) window.alert(res.message);
-      else await refreshDashHome();
+      if (res && res.ok === false && res.message) {
+        window.alert(res.message);
+        return;
+      }
+      
+      const arRes = await window.api.invoke('dash-auto-runner-save', {
+        leadTimeBeforeResetHours: parseFloat(document.getElementById('ar-lead-hours')?.value || '1'),
+        runTimeoutMinutes: parseInt(document.getElementById('ar-timeout-min')?.value || '120', 10)
+      });
+      if (!arRes?.ok) {
+        window.alert(arRes?.message || 'Autopilot settings save failed');
+      } else {
+        await refreshAutoRunnerPanel();
+        await refreshDashHome();
+      }
     });
     const workflowSelect = document.getElementById('workflow-select');
     const workflowEditor = document.getElementById('workflow-editor');

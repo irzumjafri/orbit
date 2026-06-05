@@ -161,7 +161,6 @@
         </div>
         <nav class="dash-nav-tabs" role="tablist">
           <button type="button" class="dash-nav-tab active" id="btn-dock-mission" role="tab" aria-selected="true">Overview</button>
-          <button type="button" class="dash-nav-tab" id="btn-dock-autorunner" role="tab" aria-selected="false" hidden>Auto runner</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-diagnostics" role="tab" aria-selected="false">Diagnostics</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-remoat" role="tab" aria-selected="false">Configure</button>
           <button type="button" class="dash-nav-tab" id="btn-dock-autopilot" role="tab" aria-selected="false">Instructions</button>
@@ -209,6 +208,23 @@
                   <span id="dash-launch-title">Ignite</span>
                 </button>
                 <p class="lp-launch-sub" id="dash-launch-hint">Open Antigravity · Start OrbitPrompter bot</p>
+
+                <!-- Autopilot Controls (Shown only when ignited) -->
+                <div id="overview-autopilot-container" style="display: none; flex-direction: column; align-items: center; gap: 8px; margin-top: 16px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px; user-select: none;">
+                      <label class="switch">
+                        <input type="checkbox" id="ar-enabled">
+                        <span class="slider"></span>
+                      </label>
+                      <span style="font-size: 13px; color: var(--dash-text-label); font-weight: 500;">Autopilot</span>
+                    </div>
+                    <button type="button" class="dash-btn-save" id="btn-ar-run-now" style="padding: 6px 14px; font-size: 11px;">Autopilot now</button>
+                  </div>
+                  <p class="dash-field-hint" style="text-align: center; max-width: 240px; margin: 0; line-height: 1.4;">
+                    Autopilot automatically runs workflows and tests in the background when active.
+                  </p>
+                </div>
               </div>
 
               <!-- AI Model Fuel Tanks -->
@@ -250,39 +266,7 @@
           </div>
         </div>
 
-        <div id="dash-stage-panel-autorunner" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-autorunner" hidden>
-          <div class="dash-page dash-page--autorunner">
-            <section class="dash-surface">
-              <p class="dash-section-title">Auto runner</p>
-              <p class="dash-field-hint" id="ar-ignite-hint">Ignite on Overview to enable Auto runner.</p>
-              <div class="dash-field ar-field-row">
-                <label class="wiz-check-item">
-                  <input type="checkbox" id="ar-enabled"> Enable scheduled auto-run
-                </label>
-                <p class="dash-field-hint">Checks every 5 minutes while Orbit is open and ignited.</p>
-              </div>
-              <div class="dash-field">
-                <label class="dash-field-label" for="ar-lead-hours">Lead time before reset (hours)</label>
-                <input type="number" class="dash-field-input" id="ar-lead-hours" min="0.25" max="24" step="0.25" value="1">
-              </div>
-              <div class="dash-field">
-                <label class="dash-field-label" for="ar-timeout-min">Run window (minutes)</label>
-                <input type="number" class="dash-field-input" id="ar-timeout-min" min="5" max="480" step="5" value="120">
-                <p class="dash-field-hint">Telegram completion is sent after this window (agent may still be working).</p>
-              </div>
-              <div class="dash-field">
-                <label class="dash-field-label" for="ar-model-select">Model for Run now</label>
-                <select id="ar-model-select" class="dash-field-input dash-doc-select"></select>
-              </div>
-              <div class="ar-actions">
-                <button type="button" class="dash-btn-save" id="btn-ar-run-now">Run now</button>
-                <button type="button" class="dash-btn-secondary" id="btn-ar-save">Save settings</button>
-              </div>
-              <p class="dash-field-hint ar-status-line" id="ar-status-line">—</p>
-              <p class="dash-field-hint" id="ar-telegram-hint"></p>
-            </section>
-          </div>
-        </div>
+
 
         <div id="dash-stage-panel-diagnostics" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-diagnostics" hidden>
           <div class="dash-page dash-page--diag">
@@ -296,26 +280,47 @@
         <div id="dash-stage-panel-remoat" class="dash-stage-panel" role="tabpanel" aria-labelledby="btn-dock-remoat" hidden>
           <div class="dash-page dash-page--configure">
             <div class="dash-config-grid">
+              <div style="display: flex; flex-direction: column; gap: 20px;">
+                <section class="dash-surface">
+                  <p class="dash-section-title">Telegram</p>
+                  <div class="dash-field">
+                    <label class="dash-field-label" for="dash-remoat-token">Bot token</label>
+                    <input type="password" class="dash-field-input" id="dash-remoat-token" placeholder="Paste token from BotFather" autocomplete="off">
+                    <p class="dash-field-hint">Get from @BotFather</p>
+                  </div>
+                  <div class="dash-field">
+                    <label class="dash-field-label" for="dash-remoat-user-ids">Allowed user IDs</label>
+                    <input type="text" class="dash-field-input" id="dash-remoat-user-ids" placeholder="123456789">
+                    <p class="dash-field-hint">Comma-separated — get from @userinfobot</p>
+                  </div>
+                </section>
+                <section class="dash-surface">
+                  <p class="dash-section-title">Workspace</p>
+                  <div class="dash-field">
+                    <label class="dash-field-label" for="dash-remoat-workspace">Projects folder</label>
+                    <input type="text" class="dash-field-input" id="dash-remoat-workspace" placeholder="~/Code">
+                    <p class="dash-field-hint">Parent folder for OrbitPrompter /project</p>
+                  </div>
+                </section>
+              </div>
+
               <section class="dash-surface">
-                <p class="dash-section-title">Telegram</p>
+                <p class="dash-section-title">Autopilot Settings</p>
                 <div class="dash-field">
-                  <label class="dash-field-label" for="dash-remoat-token">Bot token</label>
-                  <input type="password" class="dash-field-input" id="dash-remoat-token" placeholder="Paste token from BotFather" autocomplete="off">
-                  <p class="dash-field-hint">Get from @BotFather</p>
+                  <label class="dash-field-label" for="ar-lead-hours">Lead time before reset (hours)</label>
+                  <input type="number" class="dash-field-input" id="ar-lead-hours" min="0.25" max="24" step="0.25" value="1">
                 </div>
                 <div class="dash-field">
-                  <label class="dash-field-label" for="dash-remoat-user-ids">Allowed user IDs</label>
-                  <input type="text" class="dash-field-input" id="dash-remoat-user-ids" placeholder="123456789">
-                  <p class="dash-field-hint">Comma-separated — get from @userinfobot</p>
+                  <label class="dash-field-label" for="ar-timeout-min">Run window (minutes)</label>
+                  <input type="number" class="dash-field-input" id="ar-timeout-min" min="5" max="480" step="5" value="120">
+                  <p class="dash-field-hint">Telegram completion is sent after this window (agent may still be working).</p>
                 </div>
-              </section>
-              <section class="dash-surface">
-                <p class="dash-section-title">Workspace</p>
                 <div class="dash-field">
-                  <label class="dash-field-label" for="dash-remoat-workspace">Projects folder</label>
-                  <input type="text" class="dash-field-input" id="dash-remoat-workspace" placeholder="~/Code">
-                  <p class="dash-field-hint">Parent folder for OrbitPrompter /project</p>
+                  <label class="dash-field-label" for="ar-model-select">Model for Run now</label>
+                  <select id="ar-model-select" class="dash-field-input dash-doc-select"></select>
                 </div>
+                <p class="dash-field-hint ar-status-line" id="ar-status-line">—</p>
+                <p class="dash-field-hint" id="ar-telegram-hint"></p>
               </section>
             </div>
             <div class="dash-page-footer dash-page-footer--end">
