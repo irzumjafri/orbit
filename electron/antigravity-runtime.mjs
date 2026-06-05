@@ -152,14 +152,54 @@ export async function openAntigravityWithCdp(platform = os.platform(), workspace
   if (isRunning) {
     try {
       if (platform === 'darwin') {
-        await execFileAsync('pkill', ['-f', install.macAppName]);
+        // Quit gracefully via AppleScript
+        await execFileAsync('osascript', ['-e', `quit app "${install.macAppName}"`]);
+        // Poll for up to 5 seconds to ensure it quit, otherwise force-kill
+        const startTime = Date.now();
+        let stillRunning = true;
+        while (Date.now() - startTime < 5000) {
+          try {
+            const { stdout } = await execFileAsync('pgrep', ['-f', install.macAppName]);
+            if (stdout.trim().length === 0) {
+              stillRunning = false;
+              break;
+            }
+          } catch {
+            stillRunning = false;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (stillRunning) {
+          await execFileAsync('pkill', ['-f', install.macAppName]);
+        }
       } else if (platform === 'win32') {
-        await execFileAsync('taskkill', ['/F', '/IM', `${install.macAppName}.exe`]);
+        // taskkill without /F sends WM_CLOSE for graceful exit
+        await execFileAsync('taskkill', ['/IM', `${install.macAppName}.exe`]);
+        // Poll for up to 5 seconds, otherwise force-kill
+        const startTime = Date.now();
+        let stillRunning = true;
+        while (Date.now() - startTime < 5000) {
+          try {
+            const { stdout } = await execFileAsync('tasklist', ['/FI', `IMAGENAME eq ${install.macAppName}.exe`]);
+            if (!stdout.includes(`${install.macAppName}.exe`)) {
+              stillRunning = false;
+              break;
+            }
+          } catch {
+            stillRunning = false;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (stillRunning) {
+          await execFileAsync('taskkill', ['/F', '/IM', `${install.macAppName}.exe`]);
+        }
       }
       // Give the OS a moment to release ports/processes
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 1000));
     } catch (e) {
-      console.error('Failed to kill existing instance:', e);
+      console.error('Failed to quit existing instance:', e);
     }
   }
 
