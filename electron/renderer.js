@@ -305,7 +305,8 @@ const WORKFLOW_INSTALL_STEPS = [
   { id: 'scaffold-wf-submit', label: 'Writing submit.md', group: 'workflows' },
   { id: 'scaffold-wf-test', label: 'Writing test.md', group: 'workflows' },
   { id: 'scaffold-wf-project-creator', label: 'Writing project-creator.md', group: 'workflows' },
-  { id: 'scaffold-wf-auto-run', label: 'Writing auto-run.md', group: 'workflows' }
+  { id: 'scaffold-wf-auto-run', label: 'Writing auto-run.md', group: 'workflows' },
+  { id: 'scaffold-wf-issue', label: 'Writing issue.md', group: 'workflows' }
 ];
 
 function buildExpressInstallSteps() {
@@ -613,7 +614,8 @@ const DOC_META = {
   submit: { title: 'submit.md', hint: '~/.agents/workflows/' },
   test: { title: 'test.md', hint: '/test — tmole web or APK' },
   projectCreator: { title: 'project-creator.md', hint: 'ProjectFactory — new repos & clones' },
-  autoRun: { title: 'auto-run.md', hint: '/auto-run — Orbit scheduled agent' }
+  autoRun: { title: 'auto-run.md', hint: '/auto-run — Orbit scheduled agent' },
+  issue: { title: 'issue.md', hint: '/issue — create documented github issue' }
 };
 
 let workflowCatalog = null;
@@ -798,7 +800,7 @@ function computeDiagnosticsSummary(status, install, docs) {
   const toolOk = Object.values(status).filter(Boolean).length;
   const toolTotal = Object.keys(status).length;
   const mcpOk = install.mcpAny ? 1 : 0;
-  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
+  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun', 'issue'];
   const docOk = docKeys.reduce((n, k) => n + (docs[k] ? 1 : 0), 0);
   const ok = toolOk + mcpOk + docOk;
   const total = toolTotal + 1 + docKeys.length;
@@ -825,7 +827,7 @@ async function renderOverview(status, install, docs) {
   const fillEl = document.getElementById('overview-diag-fill');
   if (!list) return;
 
-  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
+  const docKeys = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun', 'issue'];
   const missingDocs = docKeys.filter((k) => !docs[k]);
   const remoatReady = !!(status.remoat && install.remoatConfig);
   const remoatWarn = !!(status.remoat && !install.remoatConfig);
@@ -1182,7 +1184,7 @@ async function initDashboard() {
       glyphFromBrand(brandIcons, 'mcp', 'MC')
     );
 
-    const docKeysList = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun'];
+    const docKeysList = ['gemini', 'feature', 'submit', 'test', 'projectCreator', 'autoRun', 'issue'];
     const docTiles = docKeysList
       .map((k) => {
         const meta = DOC_META[k];

@@ -46,7 +46,8 @@ import {
   buildSubmitMd,
   buildTestMd,
   buildProjectCreatorMd,
-  buildAutoRunMd
+  buildAutoRunMd,
+  buildIssueMd
 } from '../lib/scaffold-templates.mjs';
 import { fetchAntigravityQuotas } from '../lib/antigravity-quota.mjs';
 import {
@@ -119,6 +120,7 @@ async function writeWorkflowScaffoldFiles(hint) {
     buildProjectCreatorMd({ workspaceHintLine: hint })
   );
   await writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'auto-run.md'), buildAutoRunMd());
+  await writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'issue.md'), buildIssueMd());
 }
 
 async function writeGeminiScaffoldFile(hint) {
@@ -145,7 +147,9 @@ async function runScaffoldInstallStep(stepId) {
           buildProjectCreatorMd({ workspaceHintLine: hint })
         ),
       'scaffold-wf-auto-run': () =>
-        writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'auto-run.md'), buildAutoRunMd())
+        writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'auto-run.md'), buildAutoRunMd()),
+      'scaffold-wf-issue': () =>
+        writeUserScaffoldFile(homeDir, path.join(workflowsDir, 'issue.md'), buildIssueMd())
     };
     await writers[stepId]();
     return { status: 'success', message: meta.successMessage };
@@ -239,8 +243,13 @@ function getAutoRunnerController() {
       },
       ensureAutoRunWorkflow: async () => {
         const p = path.join(homeDir, '.agents', 'workflows', 'auto-run.md');
-        if (fs.existsSync(p)) return;
-        await writeUserScaffoldFile(homeDir, p, buildAutoRunMd());
+        if (!fs.existsSync(p)) {
+          await writeUserScaffoldFile(homeDir, p, buildAutoRunMd());
+        }
+        const pIssue = path.join(homeDir, '.agents', 'workflows', 'issue.md');
+        if (!fs.existsSync(pIssue)) {
+          await writeUserScaffoldFile(homeDir, pIssue, buildIssueMd());
+        }
       }
     });
   }
@@ -399,6 +408,8 @@ async function isComponentInstalled(step, data) {
         return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'project-creator.md'));
       case 'scaffold-wf-auto-run':
         return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'auto-run.md'));
+      case 'scaffold-wf-issue':
+        return fs.existsSync(path.join(homeDir, '.agents', 'workflows', 'issue.md'));
     }
   } catch {
     return false;
@@ -735,6 +746,7 @@ ipcMain.handle('dash-docs-status', () => {
     test: catalog.builtins.find((b) => b.id === 'test')?.exists ?? false,
     projectCreator: catalog.builtins.find((b) => b.id === 'projectCreator')?.exists ?? false,
     autoRun: catalog.builtins.find((b) => b.id === 'autoRun')?.exists ?? false,
+    issue: catalog.builtins.find((b) => b.id === 'issue')?.exists ?? false,
     customWorkflowCount: catalog.custom.length
   };
 });
