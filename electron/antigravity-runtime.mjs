@@ -131,6 +131,38 @@ export async function openAntigravityWithCdp(platform = os.platform(), workspace
     return { ok: true, port: existing, install, alreadyOpen: true };
   }
 
+  // If no responding port, but the app is already running, kill it to prevent single-instance delegation.
+  let isRunning = false;
+  if (platform === 'darwin') {
+    try {
+      const { stdout } = await execFileAsync('pgrep', ['-f', install.macAppName]);
+      isRunning = stdout.trim().length > 0;
+    } catch {
+      isRunning = false;
+    }
+  } else if (platform === 'win32') {
+    try {
+      const { stdout } = await execFileAsync('tasklist', ['/FI', `IMAGENAME eq ${install.macAppName}.exe`]);
+      isRunning = stdout.includes(`${install.macAppName}.exe`);
+    } catch {
+      isRunning = false;
+    }
+  }
+
+  if (isRunning) {
+    try {
+      if (platform === 'darwin') {
+        await execFileAsync('pkill', ['-f', install.macAppName]);
+      } else if (platform === 'win32') {
+        await execFileAsync('taskkill', ['/F', '/IM', `${install.macAppName}.exe`]);
+      }
+      // Give the OS a moment to release ports/processes
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (e) {
+      console.error('Failed to kill existing instance:', e);
+    }
+  }
+
   const port = await findAvailableCdpPort();
   if (!port) {
     return {
