@@ -848,7 +848,12 @@ ipcMain.handle('dash-remoat-status', () => isOrbitPrompterBotRunning());
 
 ipcMain.handle('dash-remoat-open', async () => {
   try {
-    return await openAntigravityWithCdp(os.platform());
+    const config = readOrbitPrompterConfigJson();
+    let workspacePath = config.workspaceBaseDir ? String(config.workspaceBaseDir).trim() : null;
+    if (workspacePath && !fs.existsSync(workspacePath)) {
+      workspacePath = null;
+    }
+    return await openAntigravityWithCdp(os.platform(), workspacePath || undefined);
   } catch (e) {
     return { ok: false, message: e?.message || String(e) };
   }

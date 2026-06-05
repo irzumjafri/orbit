@@ -102,7 +102,7 @@ export async function waitForCdp(port, timeoutMs = 45000) {
 }
 
 /** Open Antigravity IDE with CDP (not legacy Antigravity.app via remoat open). */
-export async function openAntigravityWithCdp(platform = os.platform()) {
+export async function openAntigravityWithCdp(platform = os.platform(), workspacePath = process.cwd()) {
   const install = resolveAntigravityInstall(platform);
   if (!install) {
     return {
@@ -114,7 +114,93 @@ export async function openAntigravityWithCdp(platform = os.platform()) {
 
   const existing = await findRespondingCdpPort();
   if (existing) {
+    if (workspacePath) {
+      try {
+        if (platform === 'darwin') {
+          await execFileAsync(install.cliPath, [workspacePath]);
+        } else if (platform === 'win32') {
+          spawn(install.cliPath, [workspacePath], {
+            detached: true,
+            stdio: 'ignore'
+          }).unref();
+        }
+      } catch (e) {
+        console.error('Failed to open workspace in existing instance:', e);
+      }
+    }
     return { ok: true, port: existing, install, alreadyOpen: true };
+  }
+
+  // If no responding port, but the app is already running, kill it to prevent single-instance delegation.
+  let isRunning = false;
+  if (platform === 'darwin') {
+    try {
+      const { stdout } = await execFileAsync('pgrep', ['-f', install.macAppName]);
+      isRunning = stdout.trim().length > 0;
+    } catch {
+      isRunning = false;
+    }
+  } else if (platform === 'win32') {
+    try {
+      const { stdout } = await execFileAsync('tasklist', ['/FI', `IMAGENAME eq ${install.macAppName}.exe`]);
+      isRunning = stdout.includes(`${install.macAppName}.exe`);
+    } catch {
+      isRunning = false;
+    }
+  }
+
+  if (isRunning) {
+    try {
+      if (platform === 'darwin') {
+        // Quit gracefully via AppleScript
+        await execFileAsync('osascript', ['-e', `quit app "${install.macAppName}"`]);
+        // Poll for up to 5 seconds to ensure it quit, otherwise force-kill
+        const startTime = Date.now();
+        let stillRunning = true;
+        while (Date.now() - startTime < 5000) {
+          try {
+            const { stdout } = await execFileAsync('pgrep', ['-f', install.macAppName]);
+            if (stdout.trim().length === 0) {
+              stillRunning = false;
+              break;
+            }
+          } catch {
+            stillRunning = false;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (stillRunning) {
+          await execFileAsync('pkill', ['-f', install.macAppName]);
+        }
+      } else if (platform === 'win32') {
+        // taskkill without /F sends WM_CLOSE for graceful exit
+        await execFileAsync('taskkill', ['/IM', `${install.macAppName}.exe`]);
+        // Poll for up to 5 seconds, otherwise force-kill
+        const startTime = Date.now();
+        let stillRunning = true;
+        while (Date.now() - startTime < 5000) {
+          try {
+            const { stdout } = await execFileAsync('tasklist', ['/FI', `IMAGENAME eq ${install.macAppName}.exe`]);
+            if (!stdout.includes(`${install.macAppName}.exe`)) {
+              stillRunning = false;
+              break;
+            }
+          } catch {
+            stillRunning = false;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (stillRunning) {
+          await execFileAsync('taskkill', ['/F', '/IM', `${install.macAppName}.exe`]);
+        }
+      }
+      // Give the OS a moment to release ports/processes
+      await new Promise((r) => setTimeout(r, 1000));
+    } catch (e) {
+      console.error('Failed to quit existing instance:', e);
+    }
   }
 
   const port = await findAvailableCdpPort();
@@ -127,9 +213,17 @@ export async function openAntigravityWithCdp(platform = os.platform()) {
 
   try {
     if (platform === 'darwin') {
-      await execFileAsync('open', ['-a', install.macAppName, '--args', `--remote-debugging-port=${port}`]);
+      const args = ['--new-window', `--remote-debugging-port=${port}`];
+      if (workspacePath) {
+        args.push(workspacePath);
+      }
+      await execFileAsync(install.cliPath, args);
     } else if (platform === 'win32') {
-      spawn(install.cliPath, [`--remote-debugging-port=${port}`], {
+      const args = [`--remote-debugging-port=${port}`];
+      if (workspacePath) {
+        args.push(workspacePath);
+      }
+      spawn(install.cliPath, args, {
         detached: true,
         stdio: 'ignore'
       }).unref();
