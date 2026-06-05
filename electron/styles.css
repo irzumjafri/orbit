@@ -3978,4 +3978,80 @@ input:checked + .slider:before {
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
 }
 
+/* Project Priority Drag and Drop List */
+.project-priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  min-height: 50px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.project-priority-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(20, 30, 50, 0.95) 0%, rgba(12, 18, 30, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.project-priority-item:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(180deg, rgba(25, 38, 62, 0.95) 0%, rgba(15, 22, 38, 0.98) 100%);
+}
+
+.project-priority-item.is-dragging {
+  opacity: 0.4;
+  border-style: dashed;
+  border-color: var(--dash-accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transform: scale(0.98);
+}
+
+.project-priority-drag-handle {
+  color: var(--dash-text-muted);
+  font-size: 14px;
+  cursor: grab;
+}
+
+.project-priority-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--dash-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.project-priority-name {
+  font-size: 13px;
+  color: var(--dash-text-label);
+  font-weight: 500;
+}
+
+.project-priority-item.is-empty {
+  justify-content: center;
+  color: var(--dash-text-muted);
+  font-size: 12px;
+  border-style: dashed;
+  background: transparent;
+  cursor: default;
+}
+
+
 

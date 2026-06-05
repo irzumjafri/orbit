@@ -233,6 +233,10 @@ function getAutoRunnerController() {
       findCdpPort: findRespondingCdpPort,
       readTelegramConfig: readTelegramConfigForNotify,
       readAutoRunnerConfig: readAutoRunnerConfigFromDisk,
+      readWorkspaceBaseDir: () => {
+        const j = readOrbitPrompterConfigJson();
+        return j.workspaceBaseDir ? expandWorkspaceBaseDir(homeDir, j.workspaceBaseDir) : '';
+      },
       ensureAutoRunWorkflow: async () => {
         const p = path.join(homeDir, '.agents', 'workflows', 'auto-run.md');
         if (fs.existsSync(p)) return;
@@ -909,14 +913,46 @@ ipcMain.handle('dash-remoat-config', async (event, action, payload) => {
     if (idErr) return { ok: false, message: idErr };
     const telegramBotToken = String(payload.telegramBotToken ?? '').trim();
     if (!telegramBotToken) return { ok: false, message: 'Telegram bot token is required.' };
+    
+    const existing = readOrbitPrompterConfigJson();
+    const autoRunner = {
+      ...existing.autoRunner,
+      projectPriority: Array.isArray(payload.projectPriority) ? payload.projectPriority : (existing.autoRunner?.projectPriority ?? [])
+    };
+    
     mergeWriteOrbitPrompterConfig({
       telegramBotToken,
       allowedUserIds,
-      workspaceBaseDir: payload.workspaceBaseDir
+      workspaceBaseDir: payload.workspaceBaseDir,
+      autoRunner
     });
     return { ok: true };
   }
   return null;
+});
+
+ipcMain.handle('dash-list-projects', async () => {
+  try {
+    const j = readOrbitPrompterConfigJson();
+    const ws = j.workspaceBaseDir ? expandWorkspaceBaseDir(homeDir, j.workspaceBaseDir) : '';
+    if (!ws || !fs.existsSync(ws)) {
+      return { ok: true, projects: [] };
+    }
+    const items = fs.readdirSync(ws, { withFileTypes: true });
+    const activeDirs = items
+      .filter((item) => item.isDirectory() && !item.name.startsWith('.'))
+      .map((item) => item.name);
+
+    const priority = j.autoRunner?.projectPriority ?? [];
+    // Filter priority to keep only existing directories
+    const ordered = priority.filter((p) => activeDirs.includes(p));
+    // Find new directories not in priority
+    const remaining = activeDirs.filter((d) => !ordered.includes(d));
+
+    return { ok: true, projects: [...ordered, ...remaining] };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
 });
 
 ipcMain.handle('dash-workflows', async (_event, action, payload) => {

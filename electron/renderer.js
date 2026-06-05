@@ -954,6 +954,78 @@ function syncAutoRunnerTabVisible() {
   }
 }
 
+let dragSourceElement = null;
+
+function handleDragStart(e) {
+  dragSourceElement = this;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.project);
+  this.classList.add('is-dragging');
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+  e.dataTransfer.dropEffect = 'move';
+  const list = document.getElementById('project-priority-list');
+  const draggingItem = dragSourceElement;
+  if (this !== draggingItem) {
+    const rect = this.getBoundingClientRect();
+    const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+    list.insertBefore(draggingItem, next ? this.nextSibling : this);
+    const items = list.querySelectorAll('.project-priority-item');
+    items.forEach((item, idx) => {
+      const idxEl = item.querySelector('.project-priority-index');
+      if (idxEl) idxEl.textContent = idx + 1;
+    });
+  }
+  return false;
+}
+
+function handleDrop(e) {
+  if (e.stopPropagation) {
+    e.stopPropagation();
+  }
+  return false;
+}
+
+function handleDragEnd() {
+  this.classList.remove('is-dragging');
+}
+
+async function refreshProjectsPriorityList() {
+  const listEl = document.getElementById('project-priority-list');
+  if (!listEl) return;
+  const res = await window.api.invoke('dash-list-projects');
+  if (!res?.ok) {
+    listEl.innerHTML = `<div class="project-priority-item is-error">Error: ${escapeHtml(res?.message || 'Failed to list projects')}</div>`;
+    return;
+  }
+  const projects = res.projects || [];
+  if (projects.length === 0) {
+    listEl.innerHTML = `<div class="project-priority-item is-empty">No projects found in Workspace.</div>`;
+    return;
+  }
+  listEl.innerHTML = '';
+  projects.forEach((proj, idx) => {
+    const item = document.createElement('div');
+    item.className = 'project-priority-item';
+    item.draggable = true;
+    item.dataset.project = proj;
+    item.innerHTML = `
+      <span class="project-priority-drag-handle">☰</span>
+      <span class="project-priority-index">${idx + 1}</span>
+      <span class="project-priority-name">${escapeHtml(proj)}</span>
+    `;
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
+    listEl.appendChild(item);
+  });
+}
+
 function populateAutoRunnerModelSelect(quota) {
   const sel = document.getElementById('ar-model-select');
   if (!sel) return;
@@ -1181,6 +1253,7 @@ async function initDashboard() {
     ]);
     const canLaunch = !!(status.antigravity && status.remoat && install.remoatConfig);
     syncRemoatUi(running, canLaunch);
+    await refreshProjectsPriorityList();
   };
 
   const showDashAutopilot = async () => {
@@ -1262,10 +1335,20 @@ async function initDashboard() {
     });
 
     document.getElementById('btn-save-remoat').addEventListener('click', async () => {
+      const listEl = document.getElementById('project-priority-list');
+      const projectPriority = [];
+      if (listEl) {
+        const items = listEl.querySelectorAll('.project-priority-item');
+        items.forEach((item) => {
+          if (item.dataset.project) projectPriority.push(item.dataset.project);
+        });
+      }
+
       const res = await window.api.invoke('dash-remoat-config', 'save', {
          telegramBotToken: document.getElementById('dash-remoat-token').value,
          allowedUserIds: document.getElementById('dash-remoat-user-ids').value,
-         workspaceBaseDir: document.getElementById('dash-remoat-workspace').value
+         workspaceBaseDir: document.getElementById('dash-remoat-workspace').value,
+         projectPriority: projectPriority
       });
       if (res && res.ok === false && res.message) {
         window.alert(res.message);
@@ -1279,6 +1362,7 @@ async function initDashboard() {
       if (!arRes?.ok) {
         window.alert(arRes?.message || 'Autopilot settings save failed');
       } else {
+        await refreshProjectsPriorityList();
         await refreshAutoRunnerPanel();
         await refreshDashHome();
       }
@@ -1375,4 +1459,5 @@ async function initDashboard() {
 
   syncAutoRunnerTabVisible(false);
   void refreshAutoRunnerPanel();
+  await refreshProjectsPriorityList();
 }
